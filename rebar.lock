@@ -1,0 +1,12 @@
+[{<<"b64fast">>,
+  {git,"https://github.com/zuckschwerdt/b64fast",
+       {ref,"10ec5d034bacca8e7ae57b52488c4c7935fc51a4"}},
+  0},
+ {<<"erlexec">>,
+  {git,"https://github.com/saleyn/erlexec.git",
+       {ref,"e13dfe7f6bb0e5a37436da6ada4b1729593c196c"}},
+  0},
+ {<<"jiffy">>,
+  {git,"https://github.com/davisp/jiffy.git",
+       {ref,"06aaf440e091c9fd5f8aea557ac760a33bd37130"}},
+  0}].

@@ -1,0 +1,46 @@
+%%% @copyright (C) 2016, AdRoll
+%%% @doc
+%%%
+%%%     Flusher behavior.
+%%%
+%%%     A flusher is initialized with a ShardID and some arbitrary data:
+%%%
+%%%         FlusherState = my_flusher:init(ShardId, FlusherData)
+%%%
+%%%     The flusher maintains a batch of records. A new record can be added
+%%%     using 'add_record', together with an opaque token. 'add_record' will
+%%%     return an error if the current batch is full:
+%%%
+%%%         case my_flusher:add_record(FlusherState, StreamRecord, Token) of
+%%%             {error, full} ->              %% should flush and try again
+%%%             {ignored, NewFlusherState} -> %% record ignored
+%%%             {ok, NewFlusherState} ->      %% record added
+%%%         end
+%%%
+%%%     The current batch can be flushed using 'flush'. The caller gets back a
+%%%     list of tokens identifying which records got flushed.
+%%%
+%%%         {ok, NewFlusherState, FlushedTokens} = my_flusher:flush(FlusherState)
+%%%
+%%%     A flusher is meant to be used as part of a 'erlmld_batch_processor'.
+%%%     The batch processor handles checkpointing and decides when to trigger
+%%%     flushing.
+%%%
+%%% @end
+%%% Created : 20 Dec 2016 by Constantin Berzan <constantin.berzan@adroll.com>
+
+-module(erlmld_flusher).
+
+-include("erlmld.hrl").
+
+-callback init(shard_id(), term()) ->
+    flusher_state().
+
+-callback add_record(flusher_state(), stream_record(), flusher_token()) ->
+    {ok, flusher_state()}
+        | {ignored, flusher_state()}
+        | {error, full | term()}.
+
+-callback flush(flusher_state()) ->
+    {ok, flusher_state(), list(flusher_token())}
+        | {error, term()}.

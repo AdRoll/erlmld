@@ -1,0 +1,65 @@
+# name of this processing application.  used when constructing the lease table:
+applicationName = ${KCL_APPNAME}
+processingLanguage = erlang
+
+# local application to launch as a shard processing worker.  note: full executable name
+# (without arguments) is exposed in a user-agent header by KCL/MLD:
+executableName = erlmld.sh ${PORT}
+
+# for a kinesis stream, this should be the stream name.  for a dynamodb stream, this
+# should be the full ARN:
+streamName = ${STREAM_NAME}
+
+# the name of the region in which the stream is located.  the KCL will create/use a
+# dynamodb worker state table in this region:
+regionName = ${STREAM_REGION}
+
+# worker id for this application instance, which is exposed in the state table.  if empty,
+# KCL will auto-generate an id:
+workerId = ${WORKER_ID}
+
+# initial position when first starting to process a stream shard, e.g., LATEST or
+# TRIM_HORIZON.  after checkpointing, the app resumes processing from the latest
+# checkpoint and does not use this value.
+initialPositionInStream = ${INITIAL_POSITION}
+
+# max: 10000 for kinesis, 1000 for dynamo streams:
+maxRecords = ${MAX_RECORDS}
+
+# min: 200 for kinesis, 500 for dynamo streams.  KCL sleeps for this
+# interval when no records are returned by an iterator:
+idleTimeBetweenReadsInMillis = ${IDLE_TIME}
+
+# if true, KCL will call processRecords even if there are no records.
+# useful if a worker is far behind on a stream:
+callProcessRecordsEvenForEmptyRecordList = true
+
+# checks environment, local config files, metadata, etc. to obtain credentials:
+AWSCredentialsProvider = DefaultAWSCredentialsProviderChain
+
+# if true, KCL will validate sequence numbers when checkpointing.
+validateSequenceNumberBeforeCheckpointing = false
+
+# this should be a comma-separated list of the enabled cloudwatch dimensions.  for
+# example, "Operation,ShardID".  defaults to "Operation".  warning: do not enable
+# "ShardID" dimension when processing dynamo streams for tables with large numbers of
+# partitions.
+metricsEnabledDimensions = ${METRICS_DIMENSIONS}
+
+# this should be NONE, SUMMARY, or DETAILED.  default: SUMMARY
+metricsLevel = ${METRICS_LEVEL}
+
+# lease duration in milliseconds:
+failoverTimeMillis = ${FAILOVER_TIME}
+
+# maximum number of leases to steal at any one time:
+maxLeasesToStealAtOneTime = ${MAX_LEASE_THEFT}
+
+# time between shard syncs:
+shardSyncIntervalMillis = ${SHARD_SYNC_TIME}
+
+# if true, ignore child shards with parents which are still open when syncing.  this is
+# needed to prevent init failure on workers processing dynamo streams with very high
+# partition counts.  it also currently requires use of a patched KCL; see
+# https://github.com/awslabs/amazon-kinesis-client/pull/240
+ignoreUnexpectedChildShards = ${IGNORE_UNEXPECTED_CHILD_SHARDS}
