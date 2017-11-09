@@ -18,9 +18,12 @@
 %%%         end
 %%%
 %%%     The current batch can be flushed using 'flush'. The caller gets back a
-%%%     list of tokens identifying which records got flushed.
+%%%     list of tokens identifying which records got flushed.  If the second
+%%%     argument to flush/2 is 'full', all outstanding data must be flushed;
+%%%     this is to support checkpointing on shards which processing is being
+%%%     terminated.
 %%%
-%%%         {ok, NewFlusherState, FlushedTokens} = my_flusher:flush(FlusherState)
+%%%         {ok, NewFlusherState, FlushedTokens} = my_flusher:flush(FlusherState, partial)
 %%%
 %%%     A flusher is meant to be used as part of a 'erlmld_batch_processor'.
 %%%     The batch processor handles checkpointing and decides when to trigger
@@ -41,6 +44,6 @@
         | {ignored, flusher_state()}
         | {error, full | term()}.
 
--callback flush(flusher_state()) ->
+-callback flush(flusher_state(), partial | full) ->
     {ok, flusher_state(), list(flusher_token())}
         | {error, term()}.

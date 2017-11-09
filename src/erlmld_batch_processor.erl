@@ -127,7 +127,7 @@ shutdown(#state{description = Description,
         terminate ->
             %% the shard is closing (e.g., as a result of a merge or split).  we should
             %% flush all outstanding data and checkpoint.
-            NState = flush(State),
+            NState = flush_full(State),
             case next_checkpoint(NState) of
 
                 %% we flushed all items and are able to checkpoint.  there shouldn't be
@@ -184,8 +184,14 @@ add_record(#state{count = Count,
     end.
 
 
-flush(#state{flusher_mod = FMod, flusher_state = FState} = State) ->
-    {ok, NFState, Tokens} = FMod:flush(FState),
+flush(State) ->
+    flush(State, partial).
+
+flush_full(State) ->
+    flush(State, full).
+
+flush(#state{flusher_mod = FMod, flusher_state = FState} = State, Kind) ->
+    {ok, NFState, Tokens} = FMod:flush(FState, Kind),
     NState = flusher_state(State, NFState),
     note_success(note_flush(NState), Tokens).
 
