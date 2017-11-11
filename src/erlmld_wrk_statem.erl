@@ -50,6 +50,8 @@
 %%%                                    "subSequenceNumber": SUBSEQNO }]
 %%%         }
 %%%
+%%%         { "action": "shutdownRequested" }
+%%%
 %%%
 %%%     Worker responses:
 %%%
@@ -284,6 +286,37 @@ handle_event(?INTERNAL, #{<<"action">> := <<"shutdown">>,
 
         {_, {error, _} = Error} ->
             {stop, Error}
+    end;
+
+
+%% MLD is gracefully stopping all workers, which can elect to checkpoint or not.  right
+%% now we treat this the same way as a "zombie" shutdown (lost lease).  need to add a
+%% non-zombie, non-terminate reason to worker behavior so we can support checkpointing
+%% here.
+handle_event(?INTERNAL, #{<<"action">> := <<"shutdownRequested">>} = R,
+             {?DISPATCH, ?REQUEST},
+             #data{handler_module = Mod,
+                   worker_state = WS} = Data) ->
+    case WS of
+        {ok, WorkerState} ->
+            case Mod:shutdown(WorkerState, zombie) of
+                ok ->
+                    %% non-terminate shutdown, worker did not checkpoint; normal exit.
+                    success(R, Data, ?SHUTDOWN);
+
+                {ok, _Checkpoint} ->
+                    %% worker should only checkpoint during shutdown for a TERMINATE shutdown;
+                    %% this isn't supported yet.
+                    error_logger:error_msg("~p attempted to checkpoint during shutdownRequest shutdown~n",
+                                           [WorkerState]),
+                    {stop, {error, unexpected_checkpoint}};
+
+                {_, {error, _} = Error} ->
+                    {stop, Error}
+            end;
+        _ ->
+            %% not initialized yet.
+            success(R, Data, ?SHUTDOWN)
     end;
 
 
