@@ -254,9 +254,10 @@ handle_event(?INTERNAL, #{<<"action">> := <<"initialize">>,
 %% (resulting in connection closure).
 handle_event(?INTERNAL, #{<<"action">> := <<"shutdown">>,
                           <<"reason">> := ReasonBin} = R,
-             {?DISPATCH, ?REQUEST},
+             {?DISPATCH, State},
              #data{handler_module = Mod,
-                   worker_state = {ok, WorkerState}} = Data) ->
+                   worker_state = {ok, WorkerState}} = Data) when State == ?REQUEST;
+                                                                  State == ?SHUTDOWN ->
     Reason = case ReasonBin of
                  <<"TERMINATE">> -> terminate;
                  <<"ZOMBIE">> -> zombie;
