@@ -51,6 +51,7 @@
     shard_id :: shard_id(),
     count = 0, % non-ignored records seen
     checkpoints = 0, % checkpoints requested
+    next_counter_checkpoint = 0, % counter value at which we can next checkpoint
     last_flush_time = os:timestamp(),
     last_checkpoint_time = os:timestamp(),
     checkpointable = gb_trees:empty(), % {Count, SequenceNo}
@@ -173,6 +174,10 @@ checkpointable(State, CPT) ->
     State#state{checkpointable = CPT}.
 
 
+next_counter_checkpoint(State, N) ->
+    State#state{next_counter_checkpoint = N}.
+
+
 flusher_state(State, FState) ->
     State#state{flusher_state = FState}.
 
@@ -250,10 +255,11 @@ next_checkpoint(State) ->
 next_checkpoint(State, {SmallestCount, _, _} = SmallestItem, LatestFinished) ->
     next_checkpoint(State, SmallestCount, SmallestItem, LatestFinished).
 
-%% if we haven't checkpointed yet, the smallest tree element must have a key whose value
-%% is 0; otherwise, we can't checkpoint yet (have an initial gap).
-next_checkpoint(#state{checkpoints = 0}, FirstSmallestCount, _, _)
-  when FirstSmallestCount > 0 ->
+%% in order to checkpoint, the smallest tree element must have a key whose value is equal
+%% to the `next_counter_checkpoint` field; otherwise, we can't checkpoint yet (we have an
+%% initial gap).
+next_checkpoint(#state{next_counter_checkpoint = N}, FirstSmallestCount, _, _)
+  when FirstSmallestCount > N ->
     undefined;
 %% if subsequence checkpointing is disabled, we can only checkpoint at a record which has
 %% been fully processed.  while advancing through contiguous items, we keep track of the
@@ -269,7 +275,9 @@ next_checkpoint(#state{enable_subsequence_checkpoints = EnableSubCP} = State,
     %% if we can checkpoint at the current SN, use it as the latest 'finished' value:
     NLatestFinished = case CanCheckpoint of
                           true ->
-                              {checkpointable(State, CPT), SmallestSN};
+                              {next_counter_checkpoint(checkpointable(State, CPT),
+                                                       SmallestCount + 1),
+                               SmallestSN};
                           false ->
                               LatestFinished
                       end,
@@ -354,16 +362,16 @@ checkpointing_test() ->
     %% checkpointable yet), so item 3 should still be 'checkpointable':
     CPT1 = gb_trees:delete(0, gb_trees:delete(1, CPT0)),
 
-    AfterCheckpoint1 = checkpointable(State, CPT1),
+    AfterCheckpoint1 = next_counter_checkpoint(checkpointable(State, CPT1), 2),
     ?assertEqual({AfterCheckpoint1, 1}, next_checkpoint(State1)),
 
     %% after completing item 2, the next checkpoint should be at sequence number 3,
     %% because the gap between successfully-processed items has been closed:
     CPT2 = gb_trees:insert(2, 2, CPT1),
-    Expected2 = incr_checkpoints(checkpointable(AfterCheckpoint1, CPT2)),
-    State2 = incr_checkpoints(note_success(AfterCheckpoint1, [{2, 2}])),
+    Expected2 = checkpointable(AfterCheckpoint1, CPT2),
+    State2 = note_success(AfterCheckpoint1, [{2, 2}]),
     ?assert(equal_cpt(Expected2, State2)),
-    AfterCheckpoint2 = incr_checkpoints(checkpointable(AfterCheckpoint1, gb_trees:empty())),
+    AfterCheckpoint2 = next_counter_checkpoint(checkpointable(AfterCheckpoint1, gb_trees:empty()), 4),
     ?assertEqual({AfterCheckpoint2, 3}, next_checkpoint(State2)).
 
 checkpointing_subrecord_test() ->
@@ -386,7 +394,7 @@ checkpointing_subrecord_test() ->
     {State3, SN2} = next_checkpoint(State2),
 
     %% item 3 is not a subrecord, so is checkpointable:
-    State4 = note_success(incr_checkpoints(State3), [{3, SN3}]),
+    State4 = note_success(State3, [{3, SN3}]),
     {_State5, SN3} = next_checkpoint(State4),
 
     %% if subsequence checkpointing is enabled, we can checkpoint at subrecords:
@@ -394,7 +402,7 @@ checkpointing_subrecord_test() ->
     State7 = note_success(State6, [{0, SN0}, {2, SN2}]),
     {State8, SN0} = next_checkpoint(State7),
 
-    State9 = note_success(incr_checkpoints(State8), [{1, SN1}]),
+    State9 = note_success(State8, [{1, SN1}]),
     {_State10, SN2} = next_checkpoint(State9).
 
 watchdog_test() ->
