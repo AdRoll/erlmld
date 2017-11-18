@@ -151,7 +151,7 @@ spam_mp() ->
     Spammy = [<<"^INFO: Received response ">>,
               <<"^INFO: Starting: Reading next message from STDIN ">>,
               <<"^INFO: Writing ProcessRecordsMessage to child process ">>,
-              <<"^INFO: Message size == 40 bytes for shard ">>,
+              <<"^INFO: Message size == (40|63) bytes for shard ">>,
               <<"com.amazonaws.services.kinesis.multilang.MultiLangProtocol validateStatusMessage$">>,
               <<"com.amazonaws.services.kinesis.multilang.MessageWriter writeMessage$">>,
               <<"com.amazonaws.services.kinesis.multilang.MessageWriter call$">>,
