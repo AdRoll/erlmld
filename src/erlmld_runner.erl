@@ -44,6 +44,8 @@ loop(Regname, ErlPid, OsPid, SpamMP) ->
             case application:get_env(erlmld, log_kcl_spam, undefined) of
                 true ->
                     io:format("~p: ~s", [Regname, Data]);
+                false ->
+                    ok;
                 undefined ->
                     ok;
                 {LagerMod, LagerSink} ->
