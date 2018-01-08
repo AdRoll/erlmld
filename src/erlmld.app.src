@@ -1,6 +1,12 @@
 {application, erlmld,
- [{description, "MultiLangDaemon erlang adapter"},
-  {vsn, "git"},
+ [{description, "An Erlang library for processing multiple Kinesis and "
+   "DynamoDB streams and shards in a single node using the Kinesis Client "
+   "Library and MultiLangDaemon."},
+  {vsn, "0.1.2"},
+  {maintainers, ["AdRoll RTB team <rtb-team+erlmld@adroll.com>"]},
+  {licenses, ["BSD 3-Clause License"]},
+  {links, [{"Github", "https://github.com/AdRoll/erlmld"}]},
+  {exclude_files, ["priv/jars"]},
   %% note: these names are only registered if app_suffix is undefined.  otherwise, these
   %% are the prefixes of names which are registered:
   {registered, [erlmld_sup,
