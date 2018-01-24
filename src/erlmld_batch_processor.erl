@@ -328,7 +328,7 @@ update_watchdog(#state{watchdog_timeout_ms = WatchdogTimeout,
     State#state{watchdog = Ref}.
 
 
-is_sub_record(#sequence_number{sub = Sub, total = Total})
+is_sub_record(#sequence_number{sub = Sub, user_total = Total})
   when is_integer(Sub) andalso is_integer(Total)
        andalso Sub < Total - 1 ->
     true;
@@ -378,9 +378,9 @@ checkpointing_subrecord_test() ->
     State = #state{enable_subsequence_checkpoints = false},
     ?assertEqual(undefined, next_checkpoint(State)),
 
-    SN0 = #sequence_number{sub = 0, total = 3},
-    SN1 = #sequence_number{sub = 1, total = 3},
-    SN2 = #sequence_number{sub = 2, total = 3},
+    SN0 = #sequence_number{sub = 0, user_total = 3},
+    SN1 = #sequence_number{sub = 1, user_total = 3},
+    SN2 = #sequence_number{sub = 2, user_total = 3},
     SN3 = #sequence_number{},
 
     %% items 0 and 2 completed and checkpointable, but not all subrecords have completed,
@@ -425,9 +425,9 @@ watchdog_test() ->
 
 is_sub_record_test() ->
     ?assertEqual(true, is_sub_record(#sequence_number{sub = 0,
-                                                      total = 2})),
+                                                      user_total = 2})),
     ?assertEqual(false, is_sub_record(#sequence_number{sub = 1,
-                                                       total = 2})),
+                                                       user_total = 2})),
     ?assertEqual(false, is_sub_record(#sequence_number{sub = undefined,
-                                                       total = undefined})).
+                                                       user_total = undefined})).
 -endif.

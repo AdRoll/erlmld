@@ -612,8 +612,10 @@ next_action(Bin, Data) ->
 %% an integer value, return a sequence_number() corresponding to those values, otherwise
 %% undefined.
 sequence_number(#{<<"sequenceNumber">> := SN} = M) when is_binary(SN) ->
+    SubSeq = maps:get(<<"subSequenceNumber">>, M, undefined),
     #sequence_number{base = decode_seqno_base(SN),
-                     sub = maps:get(<<"subSequenceNumber">>, M, undefined)};
+                     sub = SubSeq,
+                     user_sub = SubSeq};
 
 sequence_number(#{<<"sequenceNumber">> := undefined}) ->
     #sequence_number{};
@@ -622,12 +624,15 @@ sequence_number(_) ->
     undefined.
 
 % A version that takes the sequence numbers as args directly.
-sequence_number(SN, SSN, Total) when is_binary(SN) ->
-    #sequence_number{base = decode_seqno_base(SN), sub = SSN, total = Total};
+sequence_number(SN, OriSSN, SSN, Total) when is_binary(SN) ->
+    #sequence_number{base = decode_seqno_base(SN), sub = OriSSN, user_sub = SSN, user_total = Total};
 
-sequence_number(undefined, _, _) ->
+sequence_number(undefined, _, _, _) ->
     undefined.
 
+non_kpl_sequence_number(#{<<"sequenceNumber">> := SN} = M) when is_binary(SN) ->
+    SNRecord = sequence_number(M),
+    SNRecord#sequence_number{user_sub = undefined}.
 
 partition_key(#{<<"partitionKey">> := PK} = _Record) ->
     PK.
@@ -681,7 +686,7 @@ deaggregate_kpl_record(_R, Record, <<Magic:4/binary, Data/binary>> = _DecodedDat
 
 deaggregate_kpl_record(R, Record, DecodedData) ->
     %% This is a non-aggregated record.
-    [stream_record(R, partition_key(Record), DecodedData, sequence_number(Record))].
+    [stream_record(R, partition_key(Record), DecodedData, non_kpl_sequence_number(Record))].
 
 
 check_md5(Data, Checksum) ->
@@ -699,7 +704,8 @@ decode_kpl_protobuf_message(#{<<"sequenceNumber">> := SN} = AggRecord, ProtoMsg)
     #'AggregatedRecord'{partition_key_table = PKsList,
                         records = Records} = kpl_agg_pb:decode_msg(ProtoMsg, 'AggregatedRecord'),
     PKs = list_to_tuple(PKsList),
-    [stream_record(AggRecord, element(PKIndex + 1, PKs), Data, sequence_number(SN, SSN, length(Records)))
+    SubSeq = maps:get(<<"subSequenceNumber">>, AggRecord, undefined),
+    [stream_record(AggRecord, element(PKIndex + 1, PKs), Data, sequence_number(SN, SubSeq, SSN, length(Records)))
         || {#'Record'{partition_key_index = PKIndex, data = Data} = _Record, SSN}
             <- lists:zip(Records, lists:seq(0, length(Records) - 1))].
 
@@ -739,7 +745,8 @@ deaggregate_kpl_record_v1_noagg_test() ->
     ?assertEqual(<<"whatever">>, Result#stream_record.data),
     ?assertEqual(666, Result#stream_record.sequence_number#sequence_number.base),
     ?assertEqual(undefined, Result#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(undefined, Result#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(undefined, Result#stream_record.sequence_number#sequence_number.user_sub),
+    ?assertEqual(undefined, Result#stream_record.sequence_number#sequence_number.user_total),
     ok.
 
 
@@ -747,7 +754,7 @@ deaggregate_kpl_record_v1_agg_test() ->
     %% Test an aggregated record.
     %% The data is the same as in kpl_agg:simple_aggregation_test.
     R = #{},
-    AggRecord = #{<<"partitionKey">> => <<"ignored">>, <<"sequenceNumber">> => <<"666">>},
+    AggRecord = #{<<"partitionKey">> => <<"ignored">>, <<"sequenceNumber">> => <<"666">>, <<"subSequenceNumber">> => 0},
     AggData = <<(?KPL_AGG_MAGIC)/binary,10,3,112,107,49,10,3,112,107,50,18,4,101,104,
                 107,49,18,4,101,104,107,50,26,11,8,0,16,0,26,5,100,97,116,97,
                 49,26,11,8,1,16,1,26,5,100,97,116,97,50,244,41,93,155,173,190,
@@ -757,14 +764,16 @@ deaggregate_kpl_record_v1_agg_test() ->
     ?assertEqual(<<"pk1">>, Result1#stream_record.partition_key),
     ?assertEqual(<<"data1">>, Result1#stream_record.data),
     ?assertEqual(666, Result1#stream_record.sequence_number#sequence_number.base),
+    ?assertEqual(0, Result1#stream_record.sequence_number#sequence_number.user_sub),
     ?assertEqual(0, Result1#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(2, Result1#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(2, Result1#stream_record.sequence_number#sequence_number.user_total),
 
     ?assertEqual(<<"pk2">>, Result2#stream_record.partition_key),
     ?assertEqual(<<"data2">>, Result2#stream_record.data),
     ?assertEqual(666, Result2#stream_record.sequence_number#sequence_number.base),
-    ?assertEqual(1, Result2#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(2, Result2#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(1, Result2#stream_record.sequence_number#sequence_number.user_sub),
+    ?assertEqual(0, Result2#stream_record.sequence_number#sequence_number.sub),
+    ?assertEqual(2, Result2#stream_record.sequence_number#sequence_number.user_total),
 
     ok.
 
@@ -781,13 +790,15 @@ deaggregate_kpl_records_v1_noagg_test() ->
     ?assertEqual(<<"data1">>, Result1#stream_record.data),
     ?assertEqual(666, Result1#stream_record.sequence_number#sequence_number.base),
     ?assertEqual(undefined, Result1#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(undefined, Result1#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(undefined, Result1#stream_record.sequence_number#sequence_number.user_sub),
+    ?assertEqual(undefined, Result1#stream_record.sequence_number#sequence_number.user_total),
 
     ?assertEqual(<<"pk2">>, Result2#stream_record.partition_key),
     ?assertEqual(<<"data2">>, Result2#stream_record.data),
     ?assertEqual(667, Result2#stream_record.sequence_number#sequence_number.base),
     ?assertEqual(undefined, Result2#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(undefined, Result2#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(undefined, Result1#stream_record.sequence_number#sequence_number.user_sub),
+    ?assertEqual(undefined, Result2#stream_record.sequence_number#sequence_number.user_total),
 
     ok.
 
@@ -795,12 +806,12 @@ deaggregate_kpl_records_v1_noagg_test() ->
 deaggregate_kpl_records_v1_agg_test() ->
     R = #{},
     Records = [
-        #{<<"partitionKey">> => <<"pk1">>, <<"sequenceNumber">> => <<"666">>, <<"data">> => base64:encode(
+        #{<<"partitionKey">> => <<"pk1">>, <<"sequenceNumber">> => <<"666">>, <<"subSequenceNumber">> => 0, <<"data">> => base64:encode(
                 <<(?KPL_AGG_MAGIC)/binary,10,3,112,107,49,10,3,112,107,50,18,4,101,104,
                   107,49,18,4,101,104,107,50,26,11,8,0,16,0,26,5,100,97,116,97,
                   49,26,11,8,1,16,1,26,5,100,97,116,97,50,244,41,93,155,173,190,
                   58,30,240,223,216,8,26,205,86,4>>)},
-        #{<<"partitionKey">> => <<"pk2">>, <<"sequenceNumber">> => <<"667">>, <<"data">> => base64:encode(
+        #{<<"partitionKey">> => <<"pk2">>, <<"sequenceNumber">> => <<"667">>, <<"subSequenceNumber">> => 0, <<"data">> => base64:encode(
                 <<(?KPL_AGG_MAGIC)/binary,10,3,112,107,51,10,3,112,107,52,18,4,101,104,
                   107,51,18,4,101,104,107,52,26,11,8,0,16,0,26,5,100,97,116,97,
                   51,26,11,8,1,16,1,26,5,100,97,116,97,52,96,124,151,102,57,163,
@@ -811,26 +822,30 @@ deaggregate_kpl_records_v1_agg_test() ->
     ?assertEqual(<<"pk1">>, Result1#stream_record.partition_key),
     ?assertEqual(<<"data1">>, Result1#stream_record.data),
     ?assertEqual(666, Result1#stream_record.sequence_number#sequence_number.base),
+    ?assertEqual(0, Result1#stream_record.sequence_number#sequence_number.user_sub),
     ?assertEqual(0, Result1#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(2, Result1#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(2, Result1#stream_record.sequence_number#sequence_number.user_total),
 
     ?assertEqual(<<"pk2">>, Result2#stream_record.partition_key),
     ?assertEqual(<<"data2">>, Result2#stream_record.data),
     ?assertEqual(666, Result2#stream_record.sequence_number#sequence_number.base),
-    ?assertEqual(1, Result2#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(2, Result2#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(1, Result2#stream_record.sequence_number#sequence_number.user_sub),
+    ?assertEqual(0, Result2#stream_record.sequence_number#sequence_number.sub),
+    ?assertEqual(2, Result2#stream_record.sequence_number#sequence_number.user_total),
 
     ?assertEqual(<<"pk3">>, Result3#stream_record.partition_key),
     ?assertEqual(<<"data3">>, Result3#stream_record.data),
     ?assertEqual(667, Result3#stream_record.sequence_number#sequence_number.base),
-    ?assertEqual(0, Result3#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(2, Result3#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(0, Result3#stream_record.sequence_number#sequence_number.user_sub),
+    ?assertEqual(0, Result2#stream_record.sequence_number#sequence_number.sub),
+    ?assertEqual(2, Result3#stream_record.sequence_number#sequence_number.user_total),
 
     ?assertEqual(<<"pk4">>, Result4#stream_record.partition_key),
     ?assertEqual(<<"data4">>, Result4#stream_record.data),
     ?assertEqual(667, Result4#stream_record.sequence_number#sequence_number.base),
-    ?assertEqual(1, Result4#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(2, Result4#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(1, Result4#stream_record.sequence_number#sequence_number.user_sub),
+    ?assertEqual(0, Result2#stream_record.sequence_number#sequence_number.sub),
+    ?assertEqual(2, Result4#stream_record.sequence_number#sequence_number.user_total),
 
     ok.
 
@@ -855,13 +870,15 @@ deaggregate_kpl_records_v2_noagg_test() ->
     ?assertEqual(<<"data1">>, Result1#stream_record.data),
     ?assertEqual(666, Result1#stream_record.sequence_number#sequence_number.base),
     ?assertEqual(123, Result1#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(undefined, Result1#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(undefined, Result2#stream_record.sequence_number#sequence_number.user_sub),
+    ?assertEqual(undefined, Result1#stream_record.sequence_number#sequence_number.user_total),
 
     ?assertEqual(<<"pk2">>, Result2#stream_record.partition_key),
     ?assertEqual(<<"data2">>, Result2#stream_record.data),
     ?assertEqual(666, Result2#stream_record.sequence_number#sequence_number.base),
     ?assertEqual(124, Result2#stream_record.sequence_number#sequence_number.sub),
-    ?assertEqual(undefined, Result2#stream_record.sequence_number#sequence_number.total),
+    ?assertEqual(undefined, Result2#stream_record.sequence_number#sequence_number.user_sub),
+    ?assertEqual(undefined, Result2#stream_record.sequence_number#sequence_number.user_total),
 
     ok.
 
