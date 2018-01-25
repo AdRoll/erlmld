@@ -8,9 +8,15 @@
           %% record sub-sequence number for records using KPL aggregation:
           sub :: undefined | non_neg_integer(),
 
+          %% record sub-sequence number for records NOT using KPL aggregation.
+          %% erlmld supports its own KPL-like aggregation and will fill this
+          %% one when needed. For other use cases, your code is expected to
+          %% fake these when needed.
+          user_sub :: undefined | non_neg_integer(),
+
           %% total number of records in aggregated KPL record:
-          %% (sub will range from 0 to total-1)
-          total :: undefined | non_neg_integer()
+          %% (user_sub will range from 0 to user_total-1)
+          user_total :: undefined | non_neg_integer()
          }).
 
 -record(checkpoint, {
