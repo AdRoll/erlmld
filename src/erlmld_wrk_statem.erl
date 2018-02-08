@@ -410,21 +410,25 @@ handle_event(?INTERNAL, #{<<"action">> := <<"checkpoint">>,
 
 handle_event(?INTERNAL, #{<<"action">> := <<"checkpoint">>} = R,
              {?DISPATCH, CheckpointState},
-             #data{worker_state = {ok, WorkerState},
+             #data{handler_module = Mod,
+                   worker_state = {ok, WorkerState},
                    last_checkpoint = Checkpoint,
                    last_request = LastAction} = Data)
   when CheckpointState == ?CHECKPOINT;
        CheckpointState == ?SHUTDOWN_CHECKPOINT ->
-    %% successful checkpoint. fixme; provide indication of success to worker?
     SN = sequence_number(R),
-    error_logger:info_msg("~p checkpointed at ~p (~p)~n", [WorkerState, Checkpoint, SN]),
-    case CheckpointState of
-        ?CHECKPOINT ->
-            {next_state, ?PROCESS_RECORDS, Data};
-        ?SHUTDOWN_CHECKPOINT ->
-            success(LastAction, Data, ?SHUTDOWN)
+    case Mod:checkpointed(WorkerState, SN, Checkpoint) of
+        {ok, NWorkerState} ->
+            NData = worker_state(Data, NWorkerState),
+            case CheckpointState of
+                ?CHECKPOINT ->
+                    {next_state, ?PROCESS_RECORDS, NData};
+                ?SHUTDOWN_CHECKPOINT ->
+                    success(LastAction, NData, ?SHUTDOWN)
+          end;
+        {error, _} = Error ->
+            {stop, Error}
     end;
-
 
 %% we were processing records and we attempted to checkpoint, but failed because another
 %% worker stole our lease.  abort record processing, return a 'success' response for

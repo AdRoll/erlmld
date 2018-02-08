@@ -33,6 +33,7 @@
 -export([initialize/3,
          ready/1,
          process_record/2,
+         checkpointed/3,
          shutdown/2]).
 
 -include("erlmld.hrl").
@@ -46,6 +47,10 @@
 
     %% Optional callback to call each time process_record returns a checkpoint.
     on_checkpoint :: fun((term(), shard_id()) -> term()),
+
+    %% Optional, false by default. Tells whether to log or not every successful
+    %% checkpoint from the KCL worker.
+    log_checkpoints :: boolean(),
 
     description :: term(),
     shard_id :: shard_id(),
@@ -71,12 +76,14 @@
 
 initialize(Opts, ShardId, ISN) ->
     Defaults = #{on_checkpoint => fun(_, _) -> ok end,
+                 log_checkpoints => false,
                  description => undefined,
                  enable_subsequence_checkpoints => false},
     #{description := Description,
       flusher_mod := FlusherMod,
       flusher_mod_data := FlusherModData,
       on_checkpoint := OnCheckpoint,
+      log_checkpoints := LogCheckpoints,
       flush_interval_ms := FlushIntervalMs,
       checkpoint_interval_ms := CheckpointIntervalMs,
       watchdog_timeout_ms := WatchdogTimeoutMs,
@@ -85,6 +92,7 @@ initialize(Opts, ShardId, ISN) ->
         flusher_mod = FlusherMod,
         flusher_state = FlusherMod:init(ShardId, FlusherModData),
         on_checkpoint = OnCheckpoint,
+        log_checkpoints = LogCheckpoints,
         description = Description,
         shard_id = ShardId,
         flush_interval_ms = FlushIntervalMs,
@@ -114,6 +122,14 @@ process_record(#state{last_flush_time = LastFlush,
     end,
     maybe_checkpoint(update_watchdog(NState)).
 
+checkpointed(#state{log_checkpoints = LogCheckpoints} = State,
+           SequenceNumber,
+           Checkpoint) ->
+    case LogCheckpoints of
+        true -> error_logger:info_msg("~p checkpointed at ~p (~p)~n", [State, Checkpoint, SequenceNumber]);
+        false -> ok
+    end,
+    {ok, State}.
 
 shutdown(#state{description = Description,
                 shard_id = ShardId,

@@ -14,6 +14,7 @@
 -export([initialize/3,
          ready/1,
          process_record/2,
+         checkpointed/3,
          shutdown/2]).
 
 -include("erlmld.hrl").
@@ -42,6 +43,12 @@ process_record(#state{shard_id = ShardId, count = Count} = State,
             {ok, State#state{count = Count + 1}}
     end.
 
+checkpointed(#state{shard_id = ShardId, count = Count} = State,
+           SequenceNumber,
+           Checkpoint
+) ->
+    io:format("~p (~p) checkpointed at ~p (~p)~n", [ShardId, Count, Checkpoint, SequenceNumber]),
+    {ok, State}.
 
 shutdown(#state{shard_id = ShardId, count = Count}, Reason) ->
     io:format("~p (~p) shutting down, reason: ~p~n", [ShardId, Count, Reason]),
