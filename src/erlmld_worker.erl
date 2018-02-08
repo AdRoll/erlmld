@@ -63,6 +63,10 @@
         | {ok, worker_state(), checkpoint()}
         | {error, term()}.
 
+-callback checkpoint(worker_state(), sequence_number(), checkpoint()) ->
+    {ok, worker_state()}
+        | {error, term()}.
+
 -callback shutdown(worker_state(), shutdown_reason()) ->
     ok
         | {ok, checkpoint()}
