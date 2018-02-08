@@ -63,7 +63,7 @@
         | {ok, worker_state(), checkpoint()}
         | {error, term()}.
 
--callback checkpoint(worker_state(), sequence_number(), checkpoint()) ->
+-callback checkpointed(worker_state(), sequence_number(), checkpoint()) ->
     {ok, worker_state()}
         | {error, term()}.
 

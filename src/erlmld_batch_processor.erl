@@ -33,7 +33,7 @@
 -export([initialize/3,
          ready/1,
          process_record/2,
-         checkpoint/3,
+         checkpointed/3,
          shutdown/2]).
 
 -include("erlmld.hrl").
@@ -122,7 +122,7 @@ process_record(#state{last_flush_time = LastFlush,
     end,
     maybe_checkpoint(update_watchdog(NState)).
 
-checkpoint(#state{log_checkpoints = LogCheckpoints} = State,
+checkpointed(#state{log_checkpoints = LogCheckpoints} = State,
            SequenceNumber,
            Checkpoint) ->
     case LogCheckpoints of

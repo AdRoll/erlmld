@@ -14,7 +14,7 @@
 -export([initialize/3,
          ready/1,
          process_record/2,
-         checkpoint/3,
+         checkpointed/3,
          shutdown/2]).
 
 -include("erlmld.hrl").
@@ -43,7 +43,7 @@ process_record(#state{shard_id = ShardId, count = Count} = State,
             {ok, State#state{count = Count + 1}}
     end.
 
-checkpoint(#state{shard_id = ShardId, count = Count} = State,
+checkpointed(#state{shard_id = ShardId, count = Count} = State,
            SequenceNumber,
            Checkpoint
 ) ->

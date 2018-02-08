@@ -417,7 +417,7 @@ handle_event(?INTERNAL, #{<<"action">> := <<"checkpoint">>} = R,
   when CheckpointState == ?CHECKPOINT;
        CheckpointState == ?SHUTDOWN_CHECKPOINT ->
     SN = sequence_number(R),
-    case Mod:checkpoint(WorkerState, SN, Checkpoint) of
+    case Mod:checkpointed(WorkerState, SN, Checkpoint) of
         {ok, NWorkerState} ->
             NData = worker_state(Data, NWorkerState),
             case CheckpointState of
