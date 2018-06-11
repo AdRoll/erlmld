@@ -35,8 +35,8 @@
 %%%         end
 %%%
 %%%     The result currently uses a non-standard magic prefix to prevent the KCL from
-%%%     deaggregating the record automatically.  To use compression, use
-%%%     `kpl_agg:finish/2` with `true` as the second argument, which uses another
+%%%     deaggregating the record automatically.  To use compression, instantiate the
+%%%     aggregator using kpl_agg:new(true), which uses another
 %%%     non-standard magic prefix.
 %%%
 %%% @end
@@ -45,7 +45,7 @@
 -module(kpl_agg).
 
 %% API
--export([new/0, count/1, size_bytes/1, finish/1, finish/2, add/2, add_all/2]).
+-export([new/0, new/1, count/1, size_bytes/1, finish/1, add/2, add_all/2]).
 
 -define(MD5_DIGEST_BYTES, 16).
 %% From http://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecord.html:
@@ -76,7 +76,9 @@
     explicit_hash_keyset = #keyset{} :: #keyset{},
 
     %% List if user records added so far, in reverse order.
-    rev_records = [] :: [#'Record'{}]
+    rev_records = [] :: [#'Record'{}],
+
+    should_deflate = false
 }).
 
 
@@ -85,7 +87,9 @@
 %%%===================================================================
 
 new() ->
-    #state{}.
+    new(false).
+new(ShouldDeflate) ->
+    #state{should_deflate = ShouldDeflate}.
 
 count(#state{num_user_records = Num} = _State) ->
     Num.
@@ -101,15 +105,12 @@ size_bytes(#state{agg_size_bytes = Size,
          end)
         + byte_size(kpl_agg_pb:encode_msg(#'AggregatedRecord'{})).
 
-finish(#state{num_user_records = 0} = State, _) ->
+finish(#state{num_user_records = 0} = State) ->
     {undefined, State};
 
-finish(#state{agg_partition_key = AggPK, agg_explicit_hash_key = AggEHK} = State, ShouldDeflate) ->
+finish(#state{agg_partition_key = AggPK, agg_explicit_hash_key = AggEHK, should_deflate = ShouldDeflate} = State) ->
     AggRecord = {AggPK, serialize_data(State, ShouldDeflate), AggEHK},
-    {AggRecord, new()}.
-
-finish(State) ->
-    finish(State, false).
+    {AggRecord, new(ShouldDeflate)}.
 
 
 add(State, {PartitionKey, Data} = _Record) ->
@@ -443,9 +444,9 @@ full_record_test() ->
 
 
 deflate_test() ->
-    Agg0 = new(),
+    Agg0 = new(true),
     {undefined, Agg1} = add(Agg0, {<<"pk1">>, <<"data1">>, <<"ehk1">>}),
-    {{_, Data, _}, _} = finish(Agg1, true),
+    {{_, Data, _}, _} = finish(Agg1),
     <<Magic:4/binary, Deflated/binary>> = Data,
     ?assertEqual(?KPL_AGG_MAGIC_DEFLATED, Magic),
     Inflated = zlib:uncompress(Deflated),
