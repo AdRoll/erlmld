@@ -57,7 +57,8 @@
 %% A set of keys, mapping each key to a unique index.
 -record(keyset, {
     rev_keys = [] :: list(binary()),    %% list of known keys in reverse order
-    key_to_index = maps:new() :: map()  %% maps each known key to a 0-based index
+    rev_keys_length = 0 :: non_neg_integer(), %% length of the rev_keys list
+    key_to_index = maps:new() :: map() %% maps each known key to a 0-based index
 }).
 
 %% Internal state of a record aggregator. It stores an aggregated record that
@@ -278,23 +279,23 @@ is_key(Key, #keyset{key_to_index = KeyToIndex} = _KeySet) ->
 
 get_or_add_key(undefined, KeySet) ->
     {undefined, KeySet};
-get_or_add_key(Key, #keyset{rev_keys = RevKeys, key_to_index = KeyToIndex} = KeySet) ->
+get_or_add_key(Key, #keyset{rev_keys = RevKeys, rev_keys_length = Length, key_to_index = KeyToIndex} = KeySet) ->
     case maps:get(Key, KeyToIndex, not_found) of
         not_found ->
-            Index = length(RevKeys),
             NewKeySet = KeySet#keyset{
                 rev_keys = [Key | RevKeys],
-                key_to_index = maps:put(Key, Index, KeyToIndex)
+                rev_keys_length = Length + 1,
+                key_to_index = maps:put(Key, Length, KeyToIndex)
             },
-            {Index, NewKeySet};
+            {Length, NewKeySet};
         Index ->
             {Index, KeySet}
     end.
 
 
-potential_index(Key, #keyset{rev_keys = RevKeys, key_to_index = KeyToIndex} = _KeySet) ->
+potential_index(Key, #keyset{rev_keys_length = Length, key_to_index = KeyToIndex} = _KeySet) ->
     case maps:get(Key, KeyToIndex, not_found) of
-        not_found -> length(RevKeys);
+        not_found -> Length;
         Index -> Index
     end.
 
