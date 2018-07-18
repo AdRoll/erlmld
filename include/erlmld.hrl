@@ -28,7 +28,7 @@
           timestamp :: non_neg_integer(),  % approximate arrival time (ms)
           delay :: non_neg_integer(),      % approximate delay between this record and tip of stream (ms)
           sequence_number :: sequence_number(),
-          data :: binary()
+          data :: term()
          }).
 
 -type worker_state() :: term().

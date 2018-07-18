@@ -17,6 +17,7 @@
   {applications,
    [kernel,
     stdlib,
+    crypto,
     erlexec,
     jiffy,
     b64fast]},
