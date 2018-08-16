@@ -119,23 +119,23 @@
           handler_data :: term(),
 
           %% connected socket owned by this process:
-          socket :: gen_tcp:socket(),
+          socket :: undefined | gen_tcp:socket(),
 
           %% input buffer;  responses are small and we need no output buffer:
-          buf = [] :: list(binary()),
+          buf = [] :: [binary()],
 
           %% worker state returned from handler module init:
-          worker_state :: term(),
+          worker_state :: undefined | term(),
 
           %% if true, the MLD made a processRecords call with the V2 format (supplied
           %% millisBehindLatest), so we will checkpoint using the V2 checkpoint format:
           is_v2 = false :: boolean(),
 
           %% most recent action name from the peer:
-          last_request :: binary(),
+          last_request :: undefined | binary(),
 
           %% last attempted checkpoint:
-          last_checkpoint :: checkpoint()
+          last_checkpoint :: undefined | checkpoint()
          }).
 
 -define(INTERNAL, internal).
@@ -410,21 +410,25 @@ handle_event(?INTERNAL, #{<<"action">> := <<"checkpoint">>,
 
 handle_event(?INTERNAL, #{<<"action">> := <<"checkpoint">>} = R,
              {?DISPATCH, CheckpointState},
-             #data{worker_state = {ok, WorkerState},
+             #data{handler_module = Mod,
+                   worker_state = {ok, WorkerState},
                    last_checkpoint = Checkpoint,
                    last_request = LastAction} = Data)
   when CheckpointState == ?CHECKPOINT;
        CheckpointState == ?SHUTDOWN_CHECKPOINT ->
-    %% successful checkpoint. fixme; provide indication of success to worker?
     SN = sequence_number(R),
-    error_logger:info_msg("~p checkpointed at ~p (~p)~n", [WorkerState, Checkpoint, SN]),
-    case CheckpointState of
-        ?CHECKPOINT ->
-            {next_state, ?PROCESS_RECORDS, Data};
-        ?SHUTDOWN_CHECKPOINT ->
-            success(LastAction, Data, ?SHUTDOWN)
+    case Mod:checkpointed(WorkerState, SN, Checkpoint) of
+        {ok, NWorkerState} ->
+            NData = worker_state(Data, NWorkerState),
+            case CheckpointState of
+                ?CHECKPOINT ->
+                    {next_state, ?PROCESS_RECORDS, NData};
+                ?SHUTDOWN_CHECKPOINT ->
+                    success(LastAction, NData, ?SHUTDOWN)
+          end;
+        {error, _} = Error ->
+            {stop, Error}
     end;
-
 
 %% we were processing records and we attempted to checkpoint, but failed because another
 %% worker stole our lease.  abort record processing, return a 'success' response for
@@ -586,7 +590,7 @@ next_line(Bin, #data{buf = Buf} = Data) ->
 %% and remaining data.  an "action" is a line which should have been a json-encoded map
 %% containing an "action" key.  if decoding fails with a thrown error, that error is
 %% returned as the decoded value.
--spec next_action(binary(), #data{}) -> {map() | undefined, #data{}, binary()}.
+-spec next_action(binary(), #data{}) -> {map() | undefined | {error, term()}, #data{}, binary()}.
 next_action(Bin, Data) ->
     case next_line(Bin, Data) of
         {undefined, NData, Rest} ->
