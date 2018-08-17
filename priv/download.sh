@@ -6,7 +6,7 @@
 set -eu
 
 DYNAMO_PKG="dynamodb-streams-kinesis-adapter"
-DYNAMO_VERSION="1.2.1"
+DYNAMO_VERSION="1.4.0"
 
 msg () {
     echo "$@" >&2
