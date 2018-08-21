@@ -6,7 +6,7 @@
   {maintainers, ["AdRoll RTB team <rtb-team+erlmld@adroll.com>"]},
   {licenses, ["BSD 3-Clause License"]},
   {links, [{"Github", "https://github.com/AdRoll/erlmld"}]},
-  {exclude_files, ["priv/jars"]},
+  {exclude_files, ["priv/jars", "priv/ddb_jars", "priv/kcl_jars"]},
   %% note: these names are only registered if app_suffix is undefined.  otherwise, these
   %% are the prefixes of names which are registered:
   {registered, [erlmld_sup,

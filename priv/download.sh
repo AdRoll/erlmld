@@ -1,27 +1,34 @@
 #!/bin/bash
 #
 #    Download the latest released AWS DynamoDB streams adapter and all required
-#    dependencies (one of which is the KCL) to ./jars.  Requires maven.
+#    dependencies (one of which is the KCL) to ./ddb_jars.  Similarly and separately
+#    downloads KCL 1.9 and all required dependencies to ./kcl_jars.
+#
+#    Requires maven.
 #
 set -eu
 
+cd "$(dirname $0)"
+R="$(pwd)"
+
 DYNAMO_PKG="dynamodb-streams-kinesis-adapter"
 DYNAMO_VERSION="1.4.0"
+DYNAMO_DESTDIR="$R/ddb_jars"
+
+KCL_PKG="amazon-kinesis-client"
+KCL_VERSION="1.9.1"
+KCL_DESTDIR="$R/kcl_jars"
+
+BASE="http://search.maven.org/remotecontent?filepath="
 
 msg () {
     echo "$@" >&2
 }
 
-cd "$(dirname $0)"
-R="$(pwd)"
-DESTDIR="$R/jars"
-mkdir -p "$DESTDIR"
-
-BASE="http://search.maven.org/remotecontent?filepath="
-
 download () {
-    PKG="$1"
-    VERSION="$2"
+    DESTDIR="$1"
+    PKG="$2"
+    VERSION="$3"
     PREFIX="com/amazonaws/$PKG/$VERSION/$PKG-$VERSION"
     TYPES="pom jar"
     mkdir -p "$DESTDIR"
@@ -38,6 +45,7 @@ download () {
     mvn -B -f "$POM" dependency:copy-dependencies -DoutputDirectory="$DESTDIR"
 }
 
-download "$DYNAMO_PKG" "$DYNAMO_VERSION"
+download "$DYNAMO_DESTDIR" "$DYNAMO_PKG" "$DYNAMO_VERSION"
+download "$KCL_DESTDIR" "$KCL_PKG" "$KCL_VERSION"
 
 echo "done"

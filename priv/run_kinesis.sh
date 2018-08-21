@@ -5,7 +5,7 @@
 #    and it is referenced by filename.  The directory containing this script is appended
 #    to PATH.
 #
-#    The "./jars" directory relative to this script should have been populated by
+#    The "./kcl_jars" directory relative to this script should have been populated by
 #    $0/download.sh.
 #
 set -euo pipefail
@@ -22,4 +22,4 @@ CLASS=com.amazonaws.services.kinesis.multilang.MultiLangDaemon
 
 export PATH="$PATH:$R"
 
-"$JAVA" -cp "$R/jars/*":"$(dirname $1)" $CLASS "$(basename $1)"
+"$JAVA" -cp "$R/kcl_jars/*":"$(dirname $1)" $CLASS "$(basename $1)"
