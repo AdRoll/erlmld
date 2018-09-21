@@ -20,8 +20,7 @@
     stdlib,
     crypto,
     erlexec,
-    jiffy,
-    b64fast]},
+    jiffy]},
   {modules, []},
   {env, [
          %% if nonzero, use a specific listen port instead of a random one:
@@ -89,6 +88,9 @@
          %% if true, don't fail if kcl encounters child shards with open parents, which
          %% can occur when processing dynamo streams on very large tables (requires
          %% patched KCL):
-         {ignore_unexpected_child_shards, false}
+         {ignore_unexpected_child_shards, false},
+
+         %% base64 decoder {mod, fun}
+         {base64_decoder, {base64, decode}}
         ]}
  ]}.

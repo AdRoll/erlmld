@@ -664,9 +664,9 @@ stream_record(Record, PartitionKey, Data, SequenceNumber) ->
 
 
 deaggregate_kpl_records(R, Records) ->
+    Base64Decoder = application:get_env(erlmld, base64_decoder, {base64, decode}),
     lists:flatmap(fun (#{<<"data">> := RecordData} = Record) ->
-                          %% note: b64fast will fail if the data contains whitespace.
-                          deaggregate_kpl_record(R, Record, b64fast:decode64(RecordData))
+                          deaggregate_kpl_record(R, Record, b64decode(Base64Decoder, RecordData))
                   end, Records).
 
 
@@ -728,6 +728,10 @@ encode_seqno_base(X) when is_integer(X) ->
     integer_to_binary(X);
 encode_seqno_base(X) when is_atom(X), X /= undefined ->
     atom_to_binary(X, utf8).
+
+
+b64decode({M, F}, Data) ->
+    M:F(Data).
 
 
 %%%===================================================================
