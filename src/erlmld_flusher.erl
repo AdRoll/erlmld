@@ -29,12 +29,20 @@
 %%%     The batch processor handles checkpointing and decides when to trigger
 %%%     flushing.
 %%%
+%%%     If stream volume is low, a flusher module should implement ready/1,
+%%%     which if exported will be called regardless of whether any records
+%%%     could be obtained from the stream.  It may return the same values as
+%%%     flush/2.  If it returns a non-empty list of tokens as the third tuple
+%%%     element, it is considered to have just performed a partial flush.
+%%%
 %%% @end
 %%% Created : 20 Dec 2016 by Constantin Berzan <constantin.berzan@adroll.com>
 
 -module(erlmld_flusher).
 
 -include("erlmld.hrl").
+
+-optional_callbacks([ready/1]).
 
 -callback init(shard_id(), term()) ->
     flusher_state().
@@ -45,5 +53,9 @@
         | {error, full | term()}.
 
 -callback flush(flusher_state(), partial | full) ->
+    {ok, flusher_state(), list(flusher_token())}
+        | {error, term()}.
+
+-callback ready(flusher_state()) ->
     {ok, flusher_state(), list(flusher_token())}
         | {error, term()}.

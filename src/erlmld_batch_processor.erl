@@ -105,8 +105,22 @@ initialize(Opts, ShardId, ISN) ->
     {ok, update_watchdog(State)}.
 
 
-ready(State) ->
-    {ok, update_watchdog(State)}.
+ready(#state{flusher_mod = FMod, flusher_state = FState} = State) ->
+    NNState =
+        case erlang:function_exported(FMod, ready, 1) of
+            true ->
+                {ok, NFState, Tokens} = FMod:ready(FState),
+                NState = flusher_state(State, NFState),
+                case Tokens of
+                    [] ->
+                        NState;
+                    _ ->
+                        note_success(note_flush(NState), Tokens)
+                end;
+            false ->
+                State
+        end,
+    maybe_checkpoint(update_watchdog(NNState)).
 
 
 process_record(#state{last_flush_time = LastFlush,

@@ -325,20 +325,31 @@ handle_event(?INTERNAL, #{<<"action">> := <<"shutdownRequested">>} = R,
 %% callback, then deaggregate them all at once if they are in KPL format, and then provide
 %% each in turn to the handler module, which will have the opportunity to checkpoint after
 %% each record.  the MLD should wait for our "status" response before sending any
-%% additional records or other requests.
+%% additional records or other requests.  if the worker returned a checkpoint response,
+%% checkpoint before processing the records.
 handle_event(?INTERNAL, #{<<"action">> := <<"processRecords">>,
                           <<"records">> := Records} = R,
              {?DISPATCH, ?REQUEST},
              #data{handler_module = Mod,
                    worker_state = {ok, WorkerState}} = Data) ->
     case Mod:ready(WorkerState) of
-        {ok, NWorkerState} ->
+        {error, _} = Error ->
+            {stop, Error};
+
+        Ready ->
+            {NWorkerState, Checkpoint} = case Ready of
+                                             {ok, S} -> {S, undefined};
+                                             {ok, S, C} -> {S, C}
+                                         end,
             NData = worker_state(Data#data{is_v2 = maps:is_key(<<"millisBehindLatest">>, R)},
                                  NWorkerState),
-            process_records(R, NData, deaggregate_kpl_records(R, Records));
-
-        {error, _} = Error ->
-            {stop, Error}
+            DeaggregatedRecords = deaggregate_kpl_records(R, Records),
+            case Checkpoint of
+                undefined ->
+                    process_records(R, NData, DeaggregatedRecords);
+                _ ->
+                    checkpoint(R, NData, Checkpoint, DeaggregatedRecords)
+            end
     end;
 
 
