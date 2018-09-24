@@ -106,19 +106,14 @@ initialize(Opts, ShardId, ISN) ->
 
 
 ready(#state{flusher_mod = FMod, flusher_state = FState} = State) ->
+    {ok, NFState, Tokens} = FMod:heartbeat(FState),
+    NState = flusher_state(State, NFState),
     NNState =
-        case erlang:function_exported(FMod, ready, 1) of
-            true ->
-                {ok, NFState, Tokens} = FMod:ready(FState),
-                NState = flusher_state(State, NFState),
-                case Tokens of
-                    [] ->
-                        NState;
-                    _ ->
-                        note_success(note_flush(NState), Tokens)
-                end;
-            false ->
-                State
+        case Tokens of
+            [] ->
+                NState;
+            _ ->
+                note_success(note_flush(NState), Tokens)
         end,
     maybe_checkpoint(update_watchdog(NNState)).
 
