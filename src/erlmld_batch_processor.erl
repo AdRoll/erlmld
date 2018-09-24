@@ -105,8 +105,17 @@ initialize(Opts, ShardId, ISN) ->
     {ok, update_watchdog(State)}.
 
 
-ready(State) ->
-    {ok, update_watchdog(State)}.
+ready(#state{flusher_mod = FMod, flusher_state = FState} = State) ->
+    {ok, NFState, Tokens} = FMod:heartbeat(FState),
+    NState = flusher_state(State, NFState),
+    NNState =
+        case Tokens of
+            [] ->
+                NState;
+            _ ->
+                note_success(note_flush(NState), Tokens)
+        end,
+    maybe_checkpoint(update_watchdog(NNState)).
 
 
 process_record(#state{last_flush_time = LastFlush,

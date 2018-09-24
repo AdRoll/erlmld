@@ -26,9 +26,11 @@
 %%%    at the most recent sequence number.
 %%%
 %%%    Before starting to process each batch of records, a worker's ready/1 callback is
-%%%    called, which should return a possibly-updated worker state.  This can be useful
-%%%    when a record processor is using a watchdog timer and is far behind on a stream
-%%%    (and so won't receive any actual records for a while).
+%%%    called, which should return a possibly-updated worker state and possibly a
+%%%    checkpoint.  This can be useful when a record processor is using a watchdog timer
+%%%    and is far behind on a stream (and so won't receive any actual records for a
+%%%    while), or if a stream has very low volume (records seen less frequently than
+%%%    desired checkpoint or flush intervals).
 %%%
 %%%    When a shard lease has been lost or a shard has been completely processed, a worker
 %%%    will be shut down.  If the lease was lost, the worker will receive a reason of
@@ -56,6 +58,7 @@
 
 -callback ready(worker_state()) ->
     {ok, worker_state()}
+        | {ok, worker_state(), checkpoint()}
         | {error, term()}.
 
 -callback process_record(worker_state(), stream_record()) ->
