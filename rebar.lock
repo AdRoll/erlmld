@@ -1,8 +1,8 @@
 {"1.1.0",
-[{<<"erlexec">>,{pkg,<<"erlexec">>,<<"1.9.3">>},0},
- {<<"jiffy">>,{pkg,<<"jiffy">>,<<"0.14.11">>},0}]}.
+[{<<"erlexec">>,{pkg,<<"erlexec">>,<<"1.10.0">>},0},
+ {<<"jiffy">>,{pkg,<<"jiffy">>,<<"1.0.1">>},0}]}.
 [
 {pkg_hash,[
- {<<"erlexec">>, <<"3D72AC65424CED35B9658A50E5A0C9DBD5F383E28AC9096E557F0D62926DD8E4">>},
- {<<"jiffy">>, <<"919A87D491C5A6B5E3BBC27FAFEDC3A0761CA0B4C405394F121F582FD4E3F0E5">>}]}
+ {<<"erlexec">>, <<"CBA7924CF526097D2082CEB0EC34E7DB6BCA2624B8F3867FB3FA89C4CF25D227">>},
+ {<<"jiffy">>, <<"4F25639772CA41202F41BA9C8F6CA0933554283DD4742C90651E03471C55E341">>}]}
 ].
