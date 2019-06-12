@@ -12,6 +12,7 @@ notifications:
 
 script:
   - rebar3 local upgrade
+  - export PATH=/home/travis/.cache/rebar3/bin:$PATH
   - rebar3 --version
   - erl -version
   - rebar3 test
