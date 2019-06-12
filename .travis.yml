@@ -13,5 +13,4 @@ notifications:
 script:
   - rebar3 --version
   - erl -version
-  - cat rebar.config
   - rebar3 test
