@@ -35,7 +35,7 @@ idleTimeBetweenReadsInMillis = ${IDLE_TIME}
 callProcessRecordsEvenForEmptyRecordList = true
 
 # checks environment, local config files, metadata, etc. to obtain credentials:
-AWSCredentialsProvider = DefaultAWSCredentialsProviderChain
+AWSCredentialsProvider = ${AWS_CREDENTIALS_PROVIDER}
 
 # if true, KCL will validate sequence numbers when checkpointing.
 validateSequenceNumberBeforeCheckpointing = false
