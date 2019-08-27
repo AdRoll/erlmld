@@ -67,6 +67,13 @@ runner_params(StreamType) ->
     {Pathname, filename:dirname(Pathname)}.
 
 
+input_properties_file_path() ->
+    case application:get_env(erlmld, properties_file_path) of
+        {ok, Val} -> Val;
+        _ -> priv_path("mld.properties.in")
+    end.
+
+
 priv_path(Filename) ->
     Priv = code:priv_dir(erlmld),
     lists:flatten(filename:join(Priv, Filename)).
@@ -80,7 +87,7 @@ tempdir_path(Filename) ->
 %% like "$TMPDIR/erlmld/erlmld.X.properties", where X is either "default" or the
 %% app_suffix value, and return that populated pathname.
 build_properties(#{app_suffix := AppSuffix} = Opts) ->
-    Input = priv_path("mld.properties.in"),
+    Input = input_properties_file_path(),
     Output = tempdir_path("erlmld." ++ atom_to_list(case AppSuffix of
                                                         undefined -> default;
                                                         _ -> AppSuffix
