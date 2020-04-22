@@ -15,4 +15,5 @@ script:
   - export PATH=/home/travis/.cache/rebar3/bin:$PATH
   - rebar3 --version
   - erl -version
+  - rebar3 format --verify
   - rebar3 test
