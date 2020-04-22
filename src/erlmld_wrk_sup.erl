@@ -14,13 +14,9 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/3,
-         start_worker/2]).
-
+-export([start_link/3, start_worker/2]).
 %% Supervisor callbacks
 -export([init/1]).
-
--define(WORKER, erlmld_wrk_statem).
 
 %%%===================================================================
 %%% API functions
@@ -31,7 +27,7 @@ start_link(Regname, RecordProcessor, RecordProcessorData) ->
 
 start_worker(SupRef, AcceptedSocket) ->
     {ok, Pid} = Result = supervisor:start_child(SupRef, []),
-    ok = ?WORKER:accept(Pid, AcceptedSocket),
+    ok = erlmld_wrk_statem:accept(Pid, AcceptedSocket),
     Result.
 
 %%%===================================================================
@@ -39,13 +35,10 @@ start_worker(SupRef, AcceptedSocket) ->
 %%%===================================================================
 
 init([RecordProcessor, RecordProcessorData]) ->
+    SupFlags = #{strategy => simple_one_for_one, intensity => 0, period => 1},
 
-    SupFlags = #{strategy => simple_one_for_one,
-                 intensity => 0,
-                 period => 1},
-
-    Worker = #{id => ?WORKER,
-               start => {?WORKER, start_link, [RecordProcessor, RecordProcessorData]},
+    Worker = #{id => erlmld_wrk_statem,
+               start => {erlmld_wrk_statem, start_link, [RecordProcessor, RecordProcessorData]},
                restart => temporary,
                shutdown => brutal_kill},
 

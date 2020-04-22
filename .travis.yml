@@ -4,8 +4,8 @@ os:
   - linux
 
 otp_release:
-   - 20.3
    - 21.3
+   - 22.3
 
 notifications:
   email: rtb-team+travis@adroll.com
@@ -15,4 +15,5 @@ script:
   - export PATH=/home/travis/.cache/rebar3/bin:$PATH
   - rebar3 --version
   - erl -version
+  - rebar3 format --verify
   - rebar3 test
