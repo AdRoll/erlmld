@@ -4,8 +4,8 @@ os:
   - linux
 
 otp_release:
-   - 20.3
    - 21.3
+   - 22.3
 
 notifications:
   email: rtb-team+travis@adroll.com
