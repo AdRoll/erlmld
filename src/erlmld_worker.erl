@@ -51,26 +51,18 @@
 
 -include("erlmld.hrl").
 
-
--callback initialize(term(), shard_id(), sequence_number() | undefined) ->
-    {ok, worker_state()}
-        | {error, term()}.
-
--callback ready(worker_state()) ->
-    {ok, worker_state()}
-        | {ok, worker_state(), checkpoint()}
-        | {error, term()}.
-
--callback process_record(worker_state(), stream_record()) ->
-    {ok, worker_state()}
-        | {ok, worker_state(), checkpoint()}
-        | {error, term()}.
-
--callback checkpointed(worker_state(), sequence_number(), checkpoint()) ->
-    {ok, worker_state()}
-        | {error, term()}.
-
--callback shutdown(worker_state(), shutdown_reason()) ->
-    ok
-        | {ok, checkpoint()}
-        | {error, term()}.
+-callback initialize(term(), shard_id(), sequence_number() | undefined) -> {ok,
+                                                                            worker_state()} |
+                                                                           {error, term()}.
+-callback ready(worker_state()) -> {ok, worker_state()} |
+                                   {ok, worker_state(), checkpoint()} |
+                                   {error, term()}.
+-callback process_record(worker_state(), stream_record()) -> {ok, worker_state()} |
+                                                             {ok, worker_state(), checkpoint()} |
+                                                             {error, term()}.
+-callback checkpointed(worker_state(), sequence_number(), checkpoint()) -> {ok,
+                                                                            worker_state()} |
+                                                                           {error, term()}.
+-callback shutdown(worker_state(), shutdown_reason()) -> ok |
+                                                         {ok, checkpoint()} |
+                                                         {error, term()}.
