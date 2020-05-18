@@ -57,9 +57,9 @@ runner_params(StreamType) ->
 input_properties_file_path() ->
     case application:get_env(erlmld, properties_file_path) of
         {ok, Val} -> 
-            Val;
+          Val;
         _ -> 
-            priv_path("mld.properties.in")
+          priv_path("mld.properties.in")
     end.
 
 priv_path(Filename) ->
