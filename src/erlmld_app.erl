@@ -17,7 +17,7 @@ ensure_all_started() ->
     {ok, Deps} = application:get_key(erlmld, applications),
     {ok,
      lists:append([begin
-                     {ok, Started} = application:ensure_all_started(Dep),
-                     Started
+                       {ok, Started} = application:ensure_all_started(Dep),
+                       Started
                    end
                    || Dep <- Deps])}.

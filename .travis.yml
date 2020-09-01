@@ -16,4 +16,4 @@ script:
   - rebar3 --version
   - erl -version
   - rebar3 format --verify
-  - rebar3 test
+  - DEBUG=1 rebar3 test

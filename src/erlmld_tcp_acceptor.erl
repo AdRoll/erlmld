@@ -23,27 +23,29 @@ run(Regname, ListenSocket, AcceptCallback) ->
 
 loop(ListenSocket, AcceptCallback) ->
     case gen_tcp:accept(ListenSocket) of
-      {ok, AcceptedSocket} ->
-          ok = inet:setopts(AcceptedSocket,
-                            [{delay_send, true},
-                             {send_timeout, 10000},
-                             {send_timeout_close, true}]),
-          AcceptCallback(AcceptedSocket),
-          loop(ListenSocket, AcceptCallback);
-      {error, Error} ->
-          exit({accept_failed, Error})
+        {ok, AcceptedSocket} ->
+            ok =
+                inet:setopts(AcceptedSocket,
+                             [{delay_send, true},
+                              {send_timeout, 10000},
+                              {send_timeout_close, true}]),
+            AcceptCallback(AcceptedSocket),
+            loop(ListenSocket, AcceptCallback);
+        {error, Error} ->
+            exit({accept_failed, Error})
     end.
 
 %% given an IP specification and listen port, listen on that IP and port, returning the
 %% socket and actual port we're listening on.  ip may be 'loopback' (listen on loopback
 %% address) and port may be 0 (listen on a random port).
 listen(ListenIP, ListenPort) ->
-    {ok, Socket} = gen_tcp:listen(ListenPort,
-                                  [binary,
-                                   {ip, ListenIP},
-                                   {packet, raw},
-                                   {reuseaddr, true},
-                                   {active, false},
-                                   {backlog, 128}]),
+    {ok, Socket} =
+        gen_tcp:listen(ListenPort,
+                       [binary,
+                        {ip, ListenIP},
+                        {packet, raw},
+                        {reuseaddr, true},
+                        {active, false},
+                        {backlog, 128}]),
     {ok, ActualPort} = inet:port(Socket),
     {ok, Socket, ActualPort}.
