@@ -29,10 +29,10 @@ process_record(#state{shard_id = ShardId, count = Count} = State,
                #stream_record{sequence_number = SN} = Record) ->
     io:format("~p (~p) got record ~p~n", [ShardId, Count, Record]),
     case Count >= 10 of
-      true ->
-          {ok, State#state{count = 0}, #checkpoint{sequence_number = SN}};
-      false ->
-          {ok, State#state{count = Count + 1}}
+        true ->
+            {ok, State#state{count = 0}, #checkpoint{sequence_number = SN}};
+        false ->
+            {ok, State#state{count = Count + 1}}
     end.
 
 checkpointed(#state{shard_id = ShardId, count = Count} = State,
@@ -45,8 +45,8 @@ checkpointed(#state{shard_id = ShardId, count = Count} = State,
 shutdown(#state{shard_id = ShardId, count = Count}, Reason) ->
     io:format("~p (~p) shutting down, reason: ~p~n", [ShardId, Count, Reason]),
     case Reason of
-      terminate ->
-          {ok, #checkpoint{}};
-      _ ->
-          ok
+        terminate ->
+            {ok, #checkpoint{}};
+        _ ->
+            ok
     end.

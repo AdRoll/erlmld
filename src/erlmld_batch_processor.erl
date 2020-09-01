@@ -63,13 +63,14 @@
 %%%===================================================================
 
 initialize(Opts, ShardId, ISN) ->
-    Defaults = #{on_checkpoint =>
-                     fun (_, _) ->
-                             ok
-                     end,
-                 log_checkpoints => false,
-                 description => undefined,
-                 enable_subsequence_checkpoints => false},
+    Defaults =
+        #{on_checkpoint =>
+              fun (_, _) ->
+                      ok
+              end,
+          log_checkpoints => false,
+          description => undefined,
+          enable_subsequence_checkpoints => false},
     #{description := Description,
       flusher_mod := FlusherMod,
       flusher_mod_data := FlusherModData,
@@ -80,16 +81,17 @@ initialize(Opts, ShardId, ISN) ->
       watchdog_timeout_ms := WatchdogTimeoutMs,
       enable_subsequence_checkpoints := EnableSubCP} =
         maps:merge(Defaults, Opts),
-    State = #state{flusher_mod = FlusherMod,
-                   flusher_state = FlusherMod:init(ShardId, FlusherModData),
-                   on_checkpoint = OnCheckpoint,
-                   log_checkpoints = LogCheckpoints,
-                   description = Description,
-                   shard_id = ShardId,
-                   flush_interval_ms = FlushIntervalMs,
-                   checkpoint_interval_ms = CheckpointIntervalMs,
-                   watchdog_timeout_ms = WatchdogTimeoutMs,
-                   enable_subsequence_checkpoints = EnableSubCP},
+    State =
+        #state{flusher_mod = FlusherMod,
+               flusher_state = FlusherMod:init(ShardId, FlusherModData),
+               on_checkpoint = OnCheckpoint,
+               log_checkpoints = LogCheckpoints,
+               description = Description,
+               shard_id = ShardId,
+               flush_interval_ms = FlushIntervalMs,
+               checkpoint_interval_ms = CheckpointIntervalMs,
+               watchdog_timeout_ms = WatchdogTimeoutMs,
+               enable_subsequence_checkpoints = EnableSubCP},
     error_logger:info_msg("~p initialized for shard {~p,~p} at ~p~n",
                           [self(), Description, ShardId, ISN]),
     {ok, update_watchdog(State)}.
@@ -97,36 +99,38 @@ initialize(Opts, ShardId, ISN) ->
 ready(#state{flusher_mod = FMod, flusher_state = FState} = State) ->
     {ok, NFState, Tokens} = FMod:heartbeat(FState),
     NState = flusher_state(State, NFState),
-    NNState = case Tokens of
-                [] ->
-                    NState;
-                _ ->
-                    note_success(note_flush(NState), Tokens)
-              end,
+    NNState =
+        case Tokens of
+            [] ->
+                NState;
+            _ ->
+                note_success(note_flush(NState), Tokens)
+        end,
     maybe_checkpoint(update_watchdog(NNState)).
 
 process_record(#state{last_flush_time = LastFlush, flush_interval_ms = FlushInterval} =
                    State,
                Record) ->
-    {ok, NState} = case {add_record(State, Record), elapsed_ms(LastFlush)} of
-                     {{ok, State1}, E} when E >= FlushInterval ->
-                         {ok, flush(State1)};
-                     {{ok, State1}, _} ->
-                         {ok, State1};
-                     {{error, full}, _} ->
-                         add_record(flush(State), Record)
-                   end,
+    {ok, NState} =
+        case {add_record(State, Record), elapsed_ms(LastFlush)} of
+            {{ok, State1}, E} when E >= FlushInterval ->
+                {ok, flush(State1)};
+            {{ok, State1}, _} ->
+                {ok, State1};
+            {{error, full}, _} ->
+                add_record(flush(State), Record)
+        end,
     maybe_checkpoint(update_watchdog(NState)).
 
 checkpointed(#state{log_checkpoints = LogCheckpoints} = State,
              SequenceNumber,
              Checkpoint) ->
     case LogCheckpoints of
-      true ->
-          error_logger:info_msg("~p checkpointed at ~p (~p)~n",
-                                [State, Checkpoint, SequenceNumber]);
-      false ->
-          ok
+        true ->
+            error_logger:info_msg("~p checkpointed at ~p (~p)~n",
+                                  [State, Checkpoint, SequenceNumber]);
+        false ->
+            ok
     end,
     {ok, State}.
 
@@ -135,34 +139,34 @@ shutdown(#state{description = Description, shard_id = ShardId, count = Count} = 
     error_logger:info_msg("{~p,~p} (~p) shutting down, reason: ~p~n",
                           [Description, ShardId, Count, Reason]),
     case Reason of
-      zombie ->
-          %% we lost our lease, nothing else to do now.
-          ok;
-      terminate ->
-          %% the shard is closing (e.g., as a result of a merge or split).  we should
-          %% flush all outstanding data and checkpoint.
-          NState = flush_full(State),
-          case next_checkpoint(NState) of
-            %% we flushed all items and are able to checkpoint.  there shouldn't be
-            %% any more items left to checkpoint:
-            {CPState, CPSN} ->
-                error_logger:info_msg("{~p,~p} will checkpoint at ~p~n",
-                                      [Description, ShardId, CPSN]),
-                Remaining = checkpointable(CPState),
-                Remaining = gb_trees:empty(),
-                {ok, #checkpoint{sequence_number = CPSN}};
-            %% nothing was checkpointable.  there shouldn't be any items left to
-            %% checkpoint:
-            undefined ->
-                error_logger:info_msg("{~p,~p} has nothing to checkpoint, will use latest~n",
-                                      [Description, ShardId]),
-                Remaining = checkpointable(NState),
-                Remaining = gb_trees:empty(),
-                %% we checkpoint with an empty sequence number.  this will cause the
-                %% KCL to checkpoint at the most recent record it has seen on the
-                %% shard:
-                {ok, #checkpoint{}}
-          end
+        zombie ->
+            %% we lost our lease, nothing else to do now.
+            ok;
+        terminate ->
+            %% the shard is closing (e.g., as a result of a merge or split).  we should
+            %% flush all outstanding data and checkpoint.
+            NState = flush_full(State),
+            case next_checkpoint(NState) of
+                %% we flushed all items and are able to checkpoint.  there shouldn't be
+                %% any more items left to checkpoint:
+                {CPState, CPSN} ->
+                    error_logger:info_msg("{~p,~p} will checkpoint at ~p~n",
+                                          [Description, ShardId, CPSN]),
+                    Remaining = checkpointable(CPState),
+                    Remaining = gb_trees:empty(),
+                    {ok, #checkpoint{sequence_number = CPSN}};
+                %% nothing was checkpointable.  there shouldn't be any items left to
+                %% checkpoint:
+                undefined ->
+                    error_logger:info_msg("{~p,~p} has nothing to checkpoint, will use latest~n",
+                                          [Description, ShardId]),
+                    Remaining = checkpointable(NState),
+                    Remaining = gb_trees:empty(),
+                    %% we checkpoint with an empty sequence number.  this will cause the
+                    %% KCL to checkpoint at the most recent record it has seen on the
+                    %% shard:
+                    {ok, #checkpoint{}}
+            end
     end.
 
 %%%===================================================================
@@ -190,12 +194,12 @@ flusher_state(State, FState) ->
 add_record(#state{count = Count, flusher_mod = FMod, flusher_state = FState} = State,
            #stream_record{sequence_number = SN} = Record) ->
     case FMod:add_record(FState, Record, {Count, SN}) of
-      {ok, NFState} ->
-          {ok, incr_count(flusher_state(State, NFState))};
-      {ignored, NFState} ->
-          {ok, flusher_state(State, NFState)};
-      {error, full} ->
-          {error, full}
+        {ok, NFState} ->
+            {ok, incr_count(flusher_state(State, NFState))};
+        {ignored, NFState} ->
+            {ok, flusher_state(State, NFState)};
+        {error, full} ->
+            {error, full}
     end.
 
 flush(State) ->
@@ -220,26 +224,27 @@ note_success(#state{checkpointable = CPT} = State, Tokens) ->
     %%
     %% fixme; when adding a new element, also pop all smaller elements which have
     %% contiguous keys with the new element (only need to track gaps).
-    NCPT = lists:foldl(fun ({Counter, SeqNum}, Acc) ->
-                               gb_trees:insert(Counter, SeqNum, Acc)
-                       end,
-                       CPT,
-                       Tokens),
+    NCPT =
+        lists:foldl(fun ({Counter, SeqNum}, Acc) ->
+                            gb_trees:insert(Counter, SeqNum, Acc)
+                    end,
+                    CPT,
+                    Tokens),
     checkpointable(State, NCPT).
 
 maybe_checkpoint(#state{last_checkpoint_time = LastCheckpoint,
                         checkpoint_interval_ms = CheckpointInterval} =
                      State) ->
     case elapsed_ms(LastCheckpoint) of
-      N when N >= CheckpointInterval ->
-          case next_checkpoint(State) of
-            {NState, SequenceNumber} ->
-                {ok, note_checkpoint(NState), #checkpoint{sequence_number = SequenceNumber}};
-            undefined ->
-                {ok, State}
-          end;
-      _ ->
-          {ok, State}
+        N when N >= CheckpointInterval ->
+            case next_checkpoint(State) of
+                {NState, SequenceNumber} ->
+                    {ok, note_checkpoint(NState), #checkpoint{sequence_number = SequenceNumber}};
+                undefined ->
+                    {ok, State}
+            end;
+        _ ->
+            {ok, State}
     end.
 
 %% given a state, return undefined if nothing is ready to be checkpointed.  otherwise,
@@ -249,10 +254,10 @@ maybe_checkpoint(#state{last_checkpoint_time = LastCheckpoint,
 next_checkpoint(State) ->
     CPT = checkpointable(State),
     case gb_trees:is_empty(CPT) of
-      true ->
-          undefined;
-      false ->
-          next_checkpoint(State, gb_trees:take_smallest(CPT), undefined)
+        true ->
+            undefined;
+        false ->
+            next_checkpoint(State, gb_trees:take_smallest(CPT), undefined)
     end.
 
 next_checkpoint(State, {SmallestCount, _, _} = SmallestItem, LatestFinished) ->
@@ -277,24 +282,25 @@ next_checkpoint(#state{enable_subsequence_checkpoints = EnableSubCP} = State,
     %% non-aggregate record:
     CanCheckpoint = EnableSubCP orelse not is_sub_record(SmallestSN),
     %% if we can checkpoint at the current SN, use it as the latest 'finished' value:
-    NLatestFinished = case CanCheckpoint of
-                        true ->
-                            {next_counter_checkpoint(checkpointable(State, CPT), SmallestCount + 1),
-                             SmallestSN};
-                        false ->
-                            LatestFinished
-                      end,
+    NLatestFinished =
+        case CanCheckpoint of
+            true ->
+                {next_counter_checkpoint(checkpointable(State, CPT), SmallestCount + 1),
+                 SmallestSN};
+            false ->
+                LatestFinished
+        end,
     case gb_trees:is_empty(CPT) of
-      true ->
-          NLatestFinished;
-      false ->
-          NextContiguous = SmallestCount + 1,
-          case gb_trees:take_smallest(CPT) of
-            {NextContiguous, _, _} = Next ->
-                next_checkpoint(State, FirstSmallestCount, Next, NLatestFinished);
-            _ ->
-                NLatestFinished
-          end
+        true ->
+            NLatestFinished;
+        false ->
+            NextContiguous = SmallestCount + 1,
+            case gb_trees:take_smallest(CPT) of
+                {NextContiguous, _, _} = Next ->
+                    next_checkpoint(State, FirstSmallestCount, Next, NLatestFinished);
+                _ ->
+                    NLatestFinished
+            end
     end.
 
 note_checkpoint(#state{description = Description,
@@ -318,10 +324,10 @@ update_watchdog(#state{watchdog_timeout_ms = undefined} = State) ->
 update_watchdog(#state{watchdog_timeout_ms = WatchdogTimeout, watchdog = Watchdog} =
                     State) ->
     case Watchdog of
-      undefined ->
-          ok;
-      _ ->
-          timer:cancel(Watchdog)
+        undefined ->
+            ok;
+        _ ->
+            timer:cancel(Watchdog)
     end,
     {ok, Ref} = timer:exit_after(WatchdogTimeout, watchdog_timeout),
     State#state{watchdog = Ref}.
@@ -347,16 +353,15 @@ is_sub_record(_) ->
 
 equal_cpt(A, B) ->
     maps:from_list(gb_trees:to_list(checkpointable(A))) ==
-      maps:from_list(gb_trees:to_list(checkpointable(B))).
+        maps:from_list(gb_trees:to_list(checkpointable(B))).
 
 checkpointing_test() ->
     State = #state{},
     ?assertEqual(undefined, next_checkpoint(State)),
 
     %% items 0, 1, and 3 completed and checkpointable:
-    CPT0 = gb_trees:insert(0,
-                           0,
-                           gb_trees:insert(1, 1, gb_trees:insert(3, 3, gb_trees:empty()))),
+    CPT0 =
+        gb_trees:insert(0, 0, gb_trees:insert(1, 1, gb_trees:insert(3, 3, gb_trees:empty()))),
     Expected1 = checkpointable(State, CPT0),
     State1 = note_success(State, [{0, 0}, {1, 1}, {3, 3}]),
     ?assert(equal_cpt(Expected1, State1)),
@@ -373,9 +378,8 @@ checkpointing_test() ->
     Expected2 = checkpointable(AfterCheckpoint1, CPT2),
     State2 = note_success(AfterCheckpoint1, [{2, 2}]),
     ?assert(equal_cpt(Expected2, State2)),
-    AfterCheckpoint2 = next_counter_checkpoint(checkpointable(AfterCheckpoint1,
-                                                              gb_trees:empty()),
-                                               4),
+    AfterCheckpoint2 =
+        next_counter_checkpoint(checkpointable(AfterCheckpoint1, gb_trees:empty()), 4),
     ?assertEqual({AfterCheckpoint2, 3}, next_checkpoint(State2)).
 
 checkpointing_subrecord_test() ->
@@ -413,17 +417,17 @@ watchdog_test() ->
     process_flag(trap_exit, true),
     State = update_watchdog(#state{watchdog_timeout_ms = 200}),
     receive
-      {'EXIT', _, watchdog_timeout} ->
-          error("unexpected watchdog trigger")
-      after 100 ->
-                ok
+        {'EXIT', _, watchdog_timeout} ->
+            error("unexpected watchdog trigger")
+        after 100 ->
+                  ok
     end,
     update_watchdog(State),
     receive
-      {'EXIT', _, watchdog_timeout} ->
-          ok
-      after 400 ->
-                error("watchdog failed to trigger")
+        {'EXIT', _, watchdog_timeout} ->
+            ok
+        after 400 ->
+                  error("watchdog failed to trigger")
     end.
 
 is_sub_record_test() ->

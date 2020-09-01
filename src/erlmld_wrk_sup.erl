@@ -37,9 +37,10 @@ start_worker(SupRef, AcceptedSocket) ->
 init([RecordProcessor, RecordProcessorData]) ->
     SupFlags = #{strategy => simple_one_for_one, intensity => 0, period => 1},
 
-    Worker = #{id => erlmld_wrk_statem,
-               start => {erlmld_wrk_statem, start_link, [RecordProcessor, RecordProcessorData]},
-               restart => temporary,
-               shutdown => brutal_kill},
+    Worker =
+        #{id => erlmld_wrk_statem,
+          start => {erlmld_wrk_statem, start_link, [RecordProcessor, RecordProcessorData]},
+          restart => temporary,
+          shutdown => brutal_kill},
 
     {ok, {SupFlags, [Worker]}}.

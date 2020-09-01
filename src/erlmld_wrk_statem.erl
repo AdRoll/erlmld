@@ -196,25 +196,27 @@ handle_event(info, {tcp_closed, _}, _State, _) ->
 %% request or a response to a checkpoint attempt).
 handle_event(info, {tcp, Socket, Bin}, {?PEER_READ, NextReadKind}, Data) ->
     case next_action(Bin, Data) of
-      {undefined, NData, <<>>} ->
-          {keep_state, activate(NData)};
-      {{error, _} = Error, _, _} ->
-          {stop, Error};
-      {#{<<"action">> := Action} = ActionData, NData, Rest} ->
-          {next_state,
-           {?DISPATCH, NextReadKind},
-           case NextReadKind of
-             ?REQUEST ->
-                 NData#data{last_request = Action};
-             _ ->
-                 NData
-           end,
-           [{next_event, ?INTERNAL, ActionData} | case Rest of
-                                                    <<>> ->
-                                                        [];
-                                                    _ ->
-                                                        [{next_event, info, {tcp, Socket, Rest}}]
-                                                  end]}
+        {undefined, NData, <<>>} ->
+            {keep_state, activate(NData)};
+        {{error, _} = Error, _, _} ->
+            {stop, Error};
+        {#{<<"action">> := Action} = ActionData, NData, Rest} ->
+            {next_state,
+             {?DISPATCH, NextReadKind},
+             case NextReadKind of
+                 ?REQUEST ->
+                     NData#data{last_request = Action};
+                 _ ->
+                     NData
+             end,
+             [{next_event, ?INTERNAL, ActionData} | case Rest of
+                                                        <<>> ->
+                                                            [];
+                                                        _ ->
+                                                            [{next_event,
+                                                              info,
+                                                              {tcp, Socket, Rest}}]
+                                                    end]}
     end;
 %% MLD is initializing us, and we haven't been initialized yet.
 handle_event(?INTERNAL,
@@ -226,10 +228,10 @@ handle_event(?INTERNAL,
                  Data) ->
     ISN = sequence_number(R),
     case HandlerMod:initialize(HandlerData, ShardId, ISN) of
-      {ok, WorkerState} ->
-          success(R, worker_state(Data, WorkerState), ?REQUEST);
-      {error, _} = Error ->
-          {stop, Error}
+        {ok, WorkerState} ->
+            success(R, worker_state(Data, WorkerState), ?REQUEST);
+        {error, _} = Error ->
+            {stop, Error}
     end;
 %% MLD is instructing us to shut down after we've been initialized.  if the reason is
 %% TERMINATE, we should finish processing and checkpoint (shard is being closed).  if the
@@ -241,34 +243,35 @@ handle_event(?INTERNAL,
              {?DISPATCH, State},
              #data{handler_module = Mod, worker_state = {ok, WorkerState}} = Data)
     when State == ?REQUEST; State == ?SHUTDOWN ->
-    Reason = case ReasonBin of
-               <<"TERMINATE">> ->
-                   terminate;
-               <<"ZOMBIE">> ->
-                   zombie;
-               _ ->
-                   unknown
-             end,
+    Reason =
+        case ReasonBin of
+            <<"TERMINATE">> ->
+                terminate;
+            <<"ZOMBIE">> ->
+                zombie;
+            _ ->
+                unknown
+        end,
     case {Reason, Mod:shutdown(WorkerState, Reason)} of
-      {terminate, {ok, Checkpoint}} ->
-          %% shard terminating.  worker supplied a checkpoint.  checkpoint and then
-          %% return a success response for the shutdown if the checkpoint was
-          %% successful.
-          shutdown_checkpoint(Data, Checkpoint);
-      {terminate, ok} ->
-          %% worker should have checkpointed for this TERMINATE shutdown.
-          error_logger:error_msg("~p did not checkpoint after TERMINATE~n", [WorkerState]),
-          {stop, {error, expected_checkpoint}};
-      {_, ok} ->
-          %% non-terminate shutdown, worker did not checkpoint; normal exit.
-          success(R, Data, ?SHUTDOWN);
-      {_, {ok, _Checkpoint}} ->
-          %% worker should only checkpoint during shutdown for a TERMINATE shutdown.
-          error_logger:error_msg("~p attempted to checkpoint during ~p shutdown~n",
-                                 [WorkerState, ReasonBin]),
-          {stop, {error, unexpected_checkpoint}};
-      {_, {error, _} = Error} ->
-          {stop, Error}
+        {terminate, {ok, Checkpoint}} ->
+            %% shard terminating.  worker supplied a checkpoint.  checkpoint and then
+            %% return a success response for the shutdown if the checkpoint was
+            %% successful.
+            shutdown_checkpoint(Data, Checkpoint);
+        {terminate, ok} ->
+            %% worker should have checkpointed for this TERMINATE shutdown.
+            error_logger:error_msg("~p did not checkpoint after TERMINATE~n", [WorkerState]),
+            {stop, {error, expected_checkpoint}};
+        {_, ok} ->
+            %% non-terminate shutdown, worker did not checkpoint; normal exit.
+            success(R, Data, ?SHUTDOWN);
+        {_, {ok, _Checkpoint}} ->
+            %% worker should only checkpoint during shutdown for a TERMINATE shutdown.
+            error_logger:error_msg("~p attempted to checkpoint during ~p shutdown~n",
+                                   [WorkerState, ReasonBin]),
+            {stop, {error, unexpected_checkpoint}};
+        {_, {error, _} = Error} ->
+            {stop, Error}
     end;
 %% MLD is gracefully stopping all workers, which can elect to checkpoint or not.  right
 %% now we treat this the same way as a "zombie" shutdown (lost lease).  need to add a
@@ -279,23 +282,23 @@ handle_event(?INTERNAL,
              {?DISPATCH, ?REQUEST},
              #data{handler_module = Mod, worker_state = WS} = Data) ->
     case WS of
-      {ok, WorkerState} ->
-          case Mod:shutdown(WorkerState, zombie) of
-            ok ->
-                %% non-terminate shutdown, worker did not checkpoint; normal exit.
-                success(R, Data, ?SHUTDOWN);
-            {ok, _Checkpoint} ->
-                %% worker should only checkpoint during shutdown for a TERMINATE shutdown;
-                %% this isn't supported yet.
-                error_logger:error_msg("~p attempted to checkpoint during shutdownRequest shutdown~n",
-                                       [WorkerState]),
-                {stop, {error, unexpected_checkpoint}};
-            {_, {error, _} = Error} ->
-                {stop, Error}
-          end;
-      _ ->
-          %% not initialized yet.
-          success(R, Data, ?SHUTDOWN)
+        {ok, WorkerState} ->
+            case Mod:shutdown(WorkerState, zombie) of
+                ok ->
+                    %% non-terminate shutdown, worker did not checkpoint; normal exit.
+                    success(R, Data, ?SHUTDOWN);
+                {ok, _Checkpoint} ->
+                    %% worker should only checkpoint during shutdown for a TERMINATE shutdown;
+                    %% this isn't supported yet.
+                    error_logger:error_msg("~p attempted to checkpoint during shutdownRequest shutdown~n",
+                                           [WorkerState]),
+                    {stop, {error, unexpected_checkpoint}};
+                {_, {error, _} = Error} ->
+                    {stop, Error}
+            end;
+        _ ->
+            %% not initialized yet.
+            success(R, Data, ?SHUTDOWN)
     end;
 %% MLD is providing some records to be processed.  We will call the worker's ready/1
 %% callback, then deaggregate them all at once if they are in KPL format, and then provide
@@ -308,24 +311,26 @@ handle_event(?INTERNAL,
              {?DISPATCH, ?REQUEST},
              #data{handler_module = Mod, worker_state = {ok, WorkerState}} = Data) ->
     case Mod:ready(WorkerState) of
-      {error, _} = Error ->
-          {stop, Error};
-      Ready ->
-          {NWorkerState, Checkpoint} = case Ready of
-                                         {ok, S} ->
-                                             {S, undefined};
-                                         {ok, S, C} ->
-                                             {S, C}
-                                       end,
-          NData = worker_state(Data#data{is_v2 = maps:is_key(<<"millisBehindLatest">>, R)},
-                               NWorkerState),
-          DeaggregatedRecords = deaggregate_kpl_records(R, Records),
-          case Checkpoint of
-            undefined ->
-                process_records(R, NData, DeaggregatedRecords);
-            _ ->
-                checkpoint(R, NData, Checkpoint, DeaggregatedRecords)
-          end
+        {error, _} = Error ->
+            {stop, Error};
+        Ready ->
+            {NWorkerState, Checkpoint} =
+                case Ready of
+                    {ok, S} ->
+                        {S, undefined};
+                    {ok, S, C} ->
+                        {S, C}
+                end,
+            NData =
+                worker_state(Data#data{is_v2 = maps:is_key(<<"millisBehindLatest">>, R)},
+                             NWorkerState),
+            DeaggregatedRecords = deaggregate_kpl_records(R, Records),
+            case Checkpoint of
+                undefined ->
+                    process_records(R, NData, DeaggregatedRecords);
+                _ ->
+                    checkpoint(R, NData, Checkpoint, DeaggregatedRecords)
+            end
     end;
 %% MLD is returning a checkpoint response.  if a fatal error occurred, we shouldn't
 %% process any more data and should exit.  with the current version of the MLD, this will
@@ -399,16 +404,16 @@ handle_event(?INTERNAL,
     when CheckpointState == ?CHECKPOINT; CheckpointState == ?SHUTDOWN_CHECKPOINT ->
     SN = sequence_number(R),
     case Mod:checkpointed(WorkerState, SN, Checkpoint) of
-      {ok, NWorkerState} ->
-          NData = worker_state(Data, NWorkerState),
-          case CheckpointState of
-            ?CHECKPOINT ->
-                {next_state, ?PROCESS_RECORDS, NData};
-            ?SHUTDOWN_CHECKPOINT ->
-                success(LastAction, NData, ?SHUTDOWN)
-          end;
-      {error, _} = Error ->
-          {stop, Error}
+        {ok, NWorkerState} ->
+            NData = worker_state(Data, NWorkerState),
+            case CheckpointState of
+                ?CHECKPOINT ->
+                    {next_state, ?PROCESS_RECORDS, NData};
+                ?SHUTDOWN_CHECKPOINT ->
+                    success(LastAction, NData, ?SHUTDOWN)
+            end;
+        {error, _} = Error ->
+            {stop, Error}
     end;
 %% we were processing records and we attempted to checkpoint, but failed because another
 %% worker stole our lease.  abort record processing, return a 'success' response for
@@ -427,12 +432,12 @@ handle_event(?INTERNAL,
              ?PROCESS_RECORDS,
              #data{handler_module = Mod, worker_state = {ok, WorkerState}} = Data) ->
     case Mod:process_record(WorkerState, Record) of
-      {ok, NWorkerState} ->
-          process_records(R, worker_state(Data, NWorkerState), Records);
-      {ok, NWorkerState, Checkpoint} ->
-          checkpoint(R, worker_state(Data, NWorkerState), Checkpoint, Records);
-      {error, _} = Error ->
-          {stop, Error}
+        {ok, NWorkerState} ->
+            process_records(R, worker_state(Data, NWorkerState), Records);
+        {ok, NWorkerState, Checkpoint} ->
+            checkpoint(R, worker_state(Data, NWorkerState), Checkpoint, Records);
+        {error, _} = Error ->
+            {stop, Error}
     end;
 %% we suspend record processing while awaiting a checkpoint response.  this event will be
 %% seen again after changing states.
@@ -448,10 +453,10 @@ handle_event(?INTERNAL,
              #data{socket = Socket, buf = Buf} = Data) ->
     %% there should be no unprocessed/buffered request data at this point:
     case Buf of
-      [] ->
-          ok;
-      _ ->
-          throw({stop, {error, {unprocessed_request_data, Buf}}})
+        [] ->
+            ok;
+        _ ->
+            throw({stop, {error, {unprocessed_request_data, Buf}}})
     end,
     ok = gen_tcp:send(Socket, [IoData, "\n"]),
     {next_state, {?PEER_READ, NextReadKind}, activate(Data)};
@@ -514,10 +519,10 @@ checkpoint_spec(#data{is_v2 = true}, #sequence_number{base = Base, sub = Sub}) -
     #{<<"sequenceNumber">> => encode_seqno_base(Base),
       <<"subSequenceNumber">> =>
           case Sub of
-            undefined ->
-                null;
-            _ ->
-                Sub
+              undefined ->
+                  null;
+              _ ->
+                  Sub
           end};
 checkpoint_spec(#data{is_v2 = true}, undefined) ->
     #{<<"sequenceNumber">> => null, <<"subSequenceNumber">> => null};
@@ -532,10 +537,10 @@ strip_cr(<<>>) ->
     <<>>;
 strip_cr(Bin) ->
     case [binary:at(Bin, size(Bin) - 1)] of
-      "\r" ->
-          binary:part(Bin, {0, size(Bin) - 1});
-      _ ->
-          Bin
+        "\r" ->
+            binary:part(Bin, {0, size(Bin) - 1});
+        _ ->
+            Bin
     end.
 
 %% given a binary corresponding to some input data and a data(), return a 3-tuple of the
@@ -546,34 +551,34 @@ strip_cr(Bin) ->
 -spec next_line(binary(), data()) -> {binary() | undefined, data(), binary()}.
 next_line(Bin, #data{buf = Buf} = Data) ->
     case binary:split(Bin, <<"\n">>) of
-      [_] ->
-          {undefined, Data#data{buf = [Bin | Buf]}, <<>>};
-      [EOL, Rest] ->
-          Line = iolist_to_binary(lists:reverse([strip_cr(EOL) | Buf])),
-          {Line, Data#data{buf = []}, Rest}
+        [_] ->
+            {undefined, Data#data{buf = [Bin | Buf]}, <<>>};
+        [EOL, Rest] ->
+            Line = iolist_to_binary(lists:reverse([strip_cr(EOL) | Buf])),
+            {Line, Data#data{buf = []}, Rest}
     end.
 
 %% given a binary and data(), return a 3-tuple of the next action (if any), next state,
 %% and remaining data.  an "action" is a line which should have been a json-encoded map
 %% containing an "action" key.  if decoding fails with a thrown error, that error is
 %% returned as the decoded value.
--spec next_action(binary(), data()) -> {map() | undefined | {error, term()},
-                                        data(),
-                                        binary()}.
+-spec next_action(binary(), data()) ->
+                     {map() | undefined | {error, term()}, data(), binary()}.
 next_action(Bin, Data) ->
     case next_line(Bin, Data) of
-      {undefined, NData, Rest} ->
-          {undefined, NData, Rest};
-      {<<>>, NData, Rest} ->
-          {undefined, NData, Rest};
-      {Line, NData, Rest} ->
-          Dec = try
-                  jiffy:decode(Line, [return_maps, {null_term, undefined}])
+        {undefined, NData, Rest} ->
+            {undefined, NData, Rest};
+        {<<>>, NData, Rest} ->
+            {undefined, NData, Rest};
+        {Line, NData, Rest} ->
+            Dec =
+                try
+                    jiffy:decode(Line, [return_maps, {null_term, undefined}])
                 catch
-                  {error, Error} ->
-                      {error, Error}
+                    {error, Error} ->
+                        {error, Error}
                 end,
-          {Dec, NData, Rest}
+            {Dec, NData, Rest}
     end.
 
 %% given a value which is possibly a map containing a `sequenceNumber` key with a binary
@@ -608,13 +613,14 @@ worker_state(Data, WorkerState) ->
     Data#data{worker_state = {ok, WorkerState}}.
 
 stream_record(Record, PartitionKey, Data, SequenceNumber) ->
-    {Timestamp, Delay} = case Record of
-                           #{<<"action">> := <<"record">>} ->
-                               {maps:get(<<"approximateArrivalTimestamp">>, Record, undefined),
-                                maps:get(<<"millisBehindLatest">>, Record, undefined)};
-                           _ ->
-                               {undefined, undefined}
-                         end,
+    {Timestamp, Delay} =
+        case Record of
+            #{<<"action">> := <<"record">>} ->
+                {maps:get(<<"approximateArrivalTimestamp">>, Record, undefined),
+                 maps:get(<<"millisBehindLatest">>, Record, undefined)};
+            _ ->
+                {undefined, undefined}
+        end,
     #stream_record{partition_key = PartitionKey,
                    data = Data,
                    sequence_number = SequenceNumber,
@@ -633,12 +639,13 @@ deaggregate_kpl_record(_R, Record, <<Magic:4/binary, Data/binary>> = _DecodedDat
     %% This is an aggregated/deflated V1 record, or a deflated aggregated V2 record.
     %% See https://github.com/awslabs/amazon-kinesis-producer/blob/master/aggregation-format.md
     %% fixme; move this to kpl_agg.  also, make user-supplied decode functions configurable
-    AggData = case Magic of
-                ?KPL_AGG_MAGIC_DEFLATED ->
-                    zlib:uncompress(Data);
-                _ ->
-                    Data
-              end,
+    AggData =
+        case Magic of
+            ?KPL_AGG_MAGIC_DEFLATED ->
+                zlib:uncompress(Data);
+            _ ->
+                Data
+        end,
     L = byte_size(AggData),
     ProtoMsg = binary:part(AggData, 0, L - 16),
     Checksum = binary:part(AggData, L, -16),
@@ -650,15 +657,15 @@ deaggregate_kpl_record(R, Record, DecodedData) ->
 
 check_md5(Data, Checksum) ->
     case application:get_env(erlmld, check_md5_of_agg_data, true) of
-      true ->
-          case crypto:hash(md5, Data) of
-            Checksum ->
-                ok;
-            _ ->
-                error("md5 checksum failed for aggregated record")
-          end;
-      _ ->
-          ok
+        true ->
+            case crypto:hash(md5, Data) of
+                Checksum ->
+                    ok;
+                _ ->
+                    error("md5 checksum failed for aggregated record")
+            end;
+        _ ->
+            ok
     end.
 
 decode_kpl_protobuf_message(#{<<"sequenceNumber">> := SN} = AggRecord, ProtoMsg) ->
@@ -716,13 +723,15 @@ deaggregate_kpl_record_v1_agg_test() ->
     %% Test an aggregated record.
     %% The data is the same as in kpl_agg:simple_aggregation_test.
     R = #{},
-    AggRecord = #{<<"partitionKey">> => <<"ignored">>,
-                  <<"sequenceNumber">> => <<"666">>,
-                  <<"subSequenceNumber">> => 0},
-    AggData = <<?KPL_AGG_MAGIC/binary, 10, 3, 112, 107, 49, 10, 3, 112, 107, 50, 18, 4, 101,
-                104, 107, 49, 18, 4, 101, 104, 107, 50, 26, 11, 8, 0, 16, 0, 26, 5, 100, 97, 116,
-                97, 49, 26, 11, 8, 1, 16, 1, 26, 5, 100, 97, 116, 97, 50, 244, 41, 93, 155, 173,
-                190, 58, 30, 240, 223, 216, 8, 26, 205, 86, 4>>,
+    AggRecord =
+        #{<<"partitionKey">> => <<"ignored">>,
+          <<"sequenceNumber">> => <<"666">>,
+          <<"subSequenceNumber">> => 0},
+    AggData =
+        <<?KPL_AGG_MAGIC/binary, 10, 3, 112, 107, 49, 10, 3, 112, 107, 50, 18, 4, 101, 104, 107,
+          49, 18, 4, 101, 104, 107, 50, 26, 11, 8, 0, 16, 0, 26, 5, 100, 97, 116, 97, 49, 26, 11, 8,
+          1, 16, 1, 26, 5, 100, 97, 116, 97, 50, 244, 41, 93, 155, 173, 190, 58, 30, 240, 223, 216,
+          8, 26, 205, 86, 4>>,
     [Result1, Result2] = deaggregate_kpl_record(R, AggRecord, AggData),
 
     ?assertEqual(<<"pk1">>, Result1#stream_record.partition_key),
@@ -743,12 +752,13 @@ deaggregate_kpl_record_v1_agg_test() ->
 
 deaggregate_kpl_records_v1_noagg_test() ->
     R = #{},
-    Records = [#{<<"partitionKey">> => <<"pk1">>,
-                 <<"sequenceNumber">> => <<"666">>,
-                 <<"data">> => base64:encode(<<"data1">>)},
-               #{<<"partitionKey">> => <<"pk2">>,
-                 <<"sequenceNumber">> => <<"667">>,
-                 <<"data">> => base64:encode(<<"data2">>)}],
+    Records =
+        [#{<<"partitionKey">> => <<"pk1">>,
+           <<"sequenceNumber">> => <<"666">>,
+           <<"data">> => base64:encode(<<"data1">>)},
+         #{<<"partitionKey">> => <<"pk2">>,
+           <<"sequenceNumber">> => <<"667">>,
+           <<"data">> => base64:encode(<<"data2">>)}],
     [Result1, Result2] = deaggregate_kpl_records(R, Records),
 
     ?assertEqual(<<"pk1">>, Result1#stream_record.partition_key),
@@ -771,24 +781,25 @@ deaggregate_kpl_records_v1_noagg_test() ->
 
 deaggregate_kpl_records_v1_agg_test() ->
     R = #{},
-    Records = [#{<<"partitionKey">> => <<"pk1">>,
-                 <<"sequenceNumber">> => <<"666">>,
-                 <<"subSequenceNumber">> => 0,
-                 <<"data">> =>
-                     base64:encode(<<?KPL_AGG_MAGIC/binary, 10, 3, 112, 107, 49, 10, 3, 112, 107,
-                                     50, 18, 4, 101, 104, 107, 49, 18, 4, 101, 104, 107, 50, 26, 11,
-                                     8, 0, 16, 0, 26, 5, 100, 97, 116, 97, 49, 26, 11, 8, 1, 16, 1,
-                                     26, 5, 100, 97, 116, 97, 50, 244, 41, 93, 155, 173, 190, 58,
-                                     30, 240, 223, 216, 8, 26, 205, 86, 4>>)},
-               #{<<"partitionKey">> => <<"pk2">>,
-                 <<"sequenceNumber">> => <<"667">>,
-                 <<"subSequenceNumber">> => 0,
-                 <<"data">> =>
-                     base64:encode(<<?KPL_AGG_MAGIC/binary, 10, 3, 112, 107, 51, 10, 3, 112, 107,
-                                     52, 18, 4, 101, 104, 107, 51, 18, 4, 101, 104, 107, 52, 26, 11,
-                                     8, 0, 16, 0, 26, 5, 100, 97, 116, 97, 51, 26, 11, 8, 1, 16, 1,
-                                     26, 5, 100, 97, 116, 97, 52, 96, 124, 151, 102, 57, 163, 206,
-                                     141, 67, 25, 76, 61, 196, 252, 78, 12>>)}],
+    Records =
+        [#{<<"partitionKey">> => <<"pk1">>,
+           <<"sequenceNumber">> => <<"666">>,
+           <<"subSequenceNumber">> => 0,
+           <<"data">> =>
+               base64:encode(<<?KPL_AGG_MAGIC/binary, 10, 3, 112, 107, 49, 10, 3, 112, 107, 50, 18,
+                               4, 101, 104, 107, 49, 18, 4, 101, 104, 107, 50, 26, 11, 8, 0, 16, 0,
+                               26, 5, 100, 97, 116, 97, 49, 26, 11, 8, 1, 16, 1, 26, 5, 100, 97,
+                               116, 97, 50, 244, 41, 93, 155, 173, 190, 58, 30, 240, 223, 216, 8,
+                               26, 205, 86, 4>>)},
+         #{<<"partitionKey">> => <<"pk2">>,
+           <<"sequenceNumber">> => <<"667">>,
+           <<"subSequenceNumber">> => 0,
+           <<"data">> =>
+               base64:encode(<<?KPL_AGG_MAGIC/binary, 10, 3, 112, 107, 51, 10, 3, 112, 107, 52, 18,
+                               4, 101, 104, 107, 51, 18, 4, 101, 104, 107, 52, 26, 11, 8, 0, 16, 0,
+                               26, 5, 100, 97, 116, 97, 51, 26, 11, 8, 1, 16, 1, 26, 5, 100, 97,
+                               116, 97, 52, 96, 124, 151, 102, 57, 163, 206, 141, 67, 25, 76, 61,
+                               196, 252, 78, 12>>)}],
     [Result1, Result2, Result3, Result4] = deaggregate_kpl_records(R, Records),
 
     ?assertEqual(<<"pk1">>, Result1#stream_record.partition_key),
@@ -823,16 +834,17 @@ deaggregate_kpl_records_v1_agg_test() ->
 
 deaggregate_kpl_records_v2_noagg_test() ->
     R = #{},
-    Records = [#{<<"action">> => <<"record">>,
-                 <<"partitionKey">> => <<"pk1">>,
-                 <<"sequenceNumber">> => <<"666">>,
-                 <<"subSequenceNumber">> => 123,
-                 <<"data">> => base64:encode(<<"data1">>)},
-               #{<<"action">> => <<"record">>,
-                 <<"partitionKey">> => <<"pk2">>,
-                 <<"sequenceNumber">> => <<"666">>,
-                 <<"subSequenceNumber">> => 124,
-                 <<"data">> => base64:encode(<<"data2">>)}],
+    Records =
+        [#{<<"action">> => <<"record">>,
+           <<"partitionKey">> => <<"pk1">>,
+           <<"sequenceNumber">> => <<"666">>,
+           <<"subSequenceNumber">> => 123,
+           <<"data">> => base64:encode(<<"data1">>)},
+         #{<<"action">> => <<"record">>,
+           <<"partitionKey">> => <<"pk2">>,
+           <<"sequenceNumber">> => <<"666">>,
+           <<"subSequenceNumber">> => 124,
+           <<"data">> => base64:encode(<<"data2">>)}],
     [Result1, Result2] = deaggregate_kpl_records(R, Records),
 
     ?assertEqual(<<"pk1">>, Result1#stream_record.partition_key),

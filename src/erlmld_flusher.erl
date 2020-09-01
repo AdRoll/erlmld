@@ -49,14 +49,9 @@
 -include("erlmld.hrl").
 
 -callback init(shard_id(), term()) -> flusher_state().
--callback add_record(flusher_state(), stream_record(), flusher_token()) -> {ok,
-                                                                            flusher_state()} |
-                                                                           {ignored,
-                                                                            flusher_state()} |
-                                                                           {error, full | term()}.
--callback flush(flusher_state(), partial | full) -> {ok,
-                                                     flusher_state(),
-                                                     [flusher_token()]} |
-                                                    {error, term()}.
--callback heartbeat(flusher_state()) -> {ok, flusher_state(), [flusher_token()]} |
-                                        {error, term()}.
+-callback add_record(flusher_state(), stream_record(), flusher_token()) ->
+                        {ok, flusher_state()} | {ignored, flusher_state()} | {error, full | term()}.
+-callback flush(flusher_state(), partial | full) ->
+                   {ok, flusher_state(), [flusher_token()]} | {error, term()}.
+-callback heartbeat(flusher_state()) ->
+                       {ok, flusher_state(), [flusher_token()]} | {error, term()}.

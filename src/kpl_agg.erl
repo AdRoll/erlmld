@@ -90,13 +90,13 @@ count(#state{num_user_records = Num} = _State) ->
 
 size_bytes(#state{agg_size_bytes = Size, agg_partition_key = PK} = _State) ->
     byte_size(?KPL_AGG_MAGIC) + Size + ?MD5_DIGEST_BYTES +
-      case PK of
-        undefined ->
-            0;
-        _ ->
-            byte_size(PK)
-      end
-      + byte_size(kpl_agg_pb:encode_msg(#'AggregatedRecord'{})).
+        case PK of
+            undefined ->
+                0;
+            _ ->
+                byte_size(PK)
+        end
+        + byte_size(kpl_agg_pb:encode_msg(#'AggregatedRecord'{})).
 
 finish(#state{num_user_records = 0} = State) ->
     {undefined, State};
@@ -111,37 +111,38 @@ add(State, {PartitionKey, Data} = _Record) ->
     add(State, {PartitionKey, Data, create_explicit_hash_key(PartitionKey)});
 add(State, {PartitionKey, Data, ExplicitHashKey} = _Record) ->
     case {calc_record_size(State, PartitionKey, Data, ExplicitHashKey), size_bytes(State)} of
-      {RecSize, _} when RecSize > ?KINESIS_MAX_BYTES_PER_RECORD ->
-          error("input record too large to fit in a single Kinesis record");
-      {RecSize, CurSize} when RecSize + CurSize > ?KINESIS_MAX_BYTES_PER_RECORD ->
-          {FullRecord, State1} = finish(State),
-          State2 = add_record(State1, PartitionKey, Data, ExplicitHashKey, RecSize),
-          {FullRecord, State2};
-      {RecSize, _} ->
-          State1 = add_record(State, PartitionKey, Data, ExplicitHashKey, RecSize),
-          %% fixme; make size calculations more accurate
-          case size_bytes(State1) > ?KINESIS_MAX_BYTES_PER_RECORD - 64 of
-            true ->
-                %% size estimate is almost the limit, finish & retry:
-                {FullRecord, State2} = finish(State),
-                State3 = add_record(State2, PartitionKey, Data, ExplicitHashKey, RecSize),
-                {FullRecord, State3};
-            false ->
-                {undefined, State1}
-          end
+        {RecSize, _} when RecSize > ?KINESIS_MAX_BYTES_PER_RECORD ->
+            error("input record too large to fit in a single Kinesis record");
+        {RecSize, CurSize} when RecSize + CurSize > ?KINESIS_MAX_BYTES_PER_RECORD ->
+            {FullRecord, State1} = finish(State),
+            State2 = add_record(State1, PartitionKey, Data, ExplicitHashKey, RecSize),
+            {FullRecord, State2};
+        {RecSize, _} ->
+            State1 = add_record(State, PartitionKey, Data, ExplicitHashKey, RecSize),
+            %% fixme; make size calculations more accurate
+            case size_bytes(State1) > ?KINESIS_MAX_BYTES_PER_RECORD - 64 of
+                true ->
+                    %% size estimate is almost the limit, finish & retry:
+                    {FullRecord, State2} = finish(State),
+                    State3 = add_record(State2, PartitionKey, Data, ExplicitHashKey, RecSize),
+                    {FullRecord, State3};
+                false ->
+                    {undefined, State1}
+            end
     end.
 
 add_all(State, Records) ->
-    {RevAggRecords, NState} = lists:foldl(fun (Record, {RevAggRecords, Agg}) ->
-                                                  case add(Agg, Record) of
-                                                    {undefined, NewAgg} ->
-                                                        {RevAggRecords, NewAgg};
-                                                    {AggRecord, NewAgg} ->
-                                                        {[AggRecord | RevAggRecords], NewAgg}
-                                                  end
-                                          end,
-                                          {[], State},
-                                          Records),
+    {RevAggRecords, NState} =
+        lists:foldl(fun (Record, {RevAggRecords, Agg}) ->
+                            case add(Agg, Record) of
+                                {undefined, NewAgg} ->
+                                    {RevAggRecords, NewAgg};
+                                {AggRecord, NewAgg} ->
+                                    {[AggRecord | RevAggRecords], NewAgg}
+                            end
+                    end,
+                    {[], State},
+                    Records),
     {lists:reverse(RevAggRecords), NState}.
 
 %%%===================================================================
@@ -169,35 +170,38 @@ calc_record_size(#state{partition_keyset = PartitionKeySet,
                  ExplicitHashKey) ->
     %% How much space we need for the PK:
     PKLength = byte_size(PartitionKey),
-    PKSize = case is_key(PartitionKey, PartitionKeySet) of
-               true ->
-                   0;
-               false ->
-                   1 + varint_size(PKLength) + PKLength
-             end,
+    PKSize =
+        case is_key(PartitionKey, PartitionKeySet) of
+            true ->
+                0;
+            false ->
+                1 + varint_size(PKLength) + PKLength
+        end,
 
     %% How much space we need for the EHK:
-    EHKSize = case ExplicitHashKey of
-                undefined ->
-                    0;
-                _ ->
-                    EHKLength = byte_size(ExplicitHashKey),
-                    case is_key(ExplicitHashKey, ExplicitHashKeySet) of
-                      true ->
-                          0;
-                      false ->
-                          1 + varint_size(EHKLength) + EHKLength
-                    end
-              end,
+    EHKSize =
+        case ExplicitHashKey of
+            undefined ->
+                0;
+            _ ->
+                EHKLength = byte_size(ExplicitHashKey),
+                case is_key(ExplicitHashKey, ExplicitHashKeySet) of
+                    true ->
+                        0;
+                    false ->
+                        1 + varint_size(EHKLength) + EHKLength
+                end
+        end,
 
     %% How much space we need for the inner record:
     PKIndexSize = 1 + varint_size(potential_index(PartitionKey, PartitionKeySet)),
-    EHKIndexSize = case ExplicitHashKey of
-                     undefined ->
-                         0;
-                     _ ->
-                         1 + varint_size(potential_index(ExplicitHashKey, ExplicitHashKeySet))
-                   end,
+    EHKIndexSize =
+        case ExplicitHashKey of
+            undefined ->
+                0;
+            _ ->
+                1 + varint_size(potential_index(ExplicitHashKey, ExplicitHashKeySet))
+        end,
     DataLength = byte_size(Data),
     DataSize = 1 + varint_size(DataLength) + DataLength,
     InnerSize = PKIndexSize + EHKIndexSize + DataSize,
@@ -232,9 +236,8 @@ add_record(#state{partition_keyset = PKSet,
            NewRecordSize) ->
     {PKIndex, NewPKSet} = get_or_add_key(PartitionKey, PKSet),
     {EHKIndex, NewEHKSet} = get_or_add_key(ExplicitHashKey, EHKSet),
-    NewRecord = #'Record'{partition_key_index = PKIndex,
-                          explicit_hash_key_index = EHKIndex,
-                          data = Data},
+    NewRecord =
+        #'Record'{partition_key_index = PKIndex, explicit_hash_key_index = EHKIndex, data = Data},
     State#state{partition_keyset = NewPKSet,
                 explicit_hash_keyset = NewEHKSet,
                 rev_records = [NewRecord | RevRecords],
@@ -253,17 +256,18 @@ serialize_data(#state{partition_keyset = PKSet,
                       rev_records = RevRecords} =
                    _State,
                ShouldDeflate) ->
-    ProtobufMessage = #'AggregatedRecord'{partition_key_table = key_list(PKSet),
-                                          explicit_hash_key_table = key_list(EHKSet),
-                                          records = lists:reverse(RevRecords)},
+    ProtobufMessage =
+        #'AggregatedRecord'{partition_key_table = key_list(PKSet),
+                            explicit_hash_key_table = key_list(EHKSet),
+                            records = lists:reverse(RevRecords)},
     SerializedData = kpl_agg_pb:encode_msg(ProtobufMessage),
     Checksum = crypto:hash(md5, SerializedData),
     case ShouldDeflate of
-      true ->
-          <<?KPL_AGG_MAGIC_DEFLATED/binary,
-            (zlib:compress(<<SerializedData/binary, Checksum/binary>>))/binary>>;
-      false ->
-          <<?KPL_AGG_MAGIC/binary, SerializedData/binary, Checksum/binary>>
+        true ->
+            <<?KPL_AGG_MAGIC_DEFLATED/binary,
+              (zlib:compress(<<SerializedData/binary, Checksum/binary>>))/binary>>;
+        false ->
+            <<?KPL_AGG_MAGIC/binary, SerializedData/binary, Checksum/binary>>
     end.
 
 %%%===================================================================
@@ -279,22 +283,23 @@ get_or_add_key(Key,
                #keyset{rev_keys = RevKeys, rev_keys_length = Length, key_to_index = KeyToIndex} =
                    KeySet) ->
     case maps:get(Key, KeyToIndex, not_found) of
-      not_found ->
-          NewKeySet = KeySet#keyset{rev_keys = [Key | RevKeys],
-                                    rev_keys_length = Length + 1,
-                                    key_to_index = maps:put(Key, Length, KeyToIndex)},
-          {Length, NewKeySet};
-      Index ->
-          {Index, KeySet}
+        not_found ->
+            NewKeySet =
+                KeySet#keyset{rev_keys = [Key | RevKeys],
+                              rev_keys_length = Length + 1,
+                              key_to_index = maps:put(Key, Length, KeyToIndex)},
+            {Length, NewKeySet};
+        Index ->
+            {Index, KeySet}
     end.
 
 potential_index(Key,
                 #keyset{rev_keys_length = Length, key_to_index = KeyToIndex} = _KeySet) ->
     case maps:get(Key, KeyToIndex, not_found) of
-      not_found ->
-          Length;
-      Index ->
-          Index
+        not_found ->
+            Length;
+        Index ->
+            Index
     end.
 
 key_list(#keyset{rev_keys = RevKeys} = _KeySet) ->
@@ -357,38 +362,40 @@ simple_aggregation_test() ->
     %% Reference values obtained using priv/kpl_agg_tests_helper.py.
     RefPK = <<"pk1">>,
     RefEHK = <<"ehk1">>,
-    RefData = <<?KPL_AGG_MAGIC/binary, 10, 3, 112, 107, 49, 10, 3, 112, 107, 50, 18, 4, 101,
-                104, 107, 49, 18, 4, 101, 104, 107, 50, 26, 11, 8, 0, 16, 0, 26, 5, 100, 97, 116,
-                97, 49, 26, 11, 8, 1, 16, 1, 26, 5, 100, 97, 116, 97, 50, 244, 41, 93, 155, 173,
-                190, 58, 30, 240, 223, 216, 8, 26, 205, 86, 4>>,
+    RefData =
+        <<?KPL_AGG_MAGIC/binary, 10, 3, 112, 107, 49, 10, 3, 112, 107, 50, 18, 4, 101, 104, 107,
+          49, 18, 4, 101, 104, 107, 50, 26, 11, 8, 0, 16, 0, 26, 5, 100, 97, 116, 97, 49, 26, 11, 8,
+          1, 16, 1, 26, 5, 100, 97, 116, 97, 50, 244, 41, 93, 155, 173, 190, 58, 30, 240, 223, 216,
+          8, 26, 205, 86, 4>>,
     ?assertEqual({RefPK, RefData, RefEHK}, AggRecord),
     ok.
 
 aggregate_many(Records) ->
     {AggRecords, Agg} = add_all(new(), Records),
     case finish(Agg) of
-      {undefined, _} ->
-          AggRecords;
-      {LastAggRecord, _} ->
-          AggRecords ++ [LastAggRecord]
+        {undefined, _} ->
+            AggRecords;
+        {LastAggRecord, _} ->
+            AggRecords ++ [LastAggRecord]
     end.
 
 shared_keys_test() ->
-    [AggRecord] = aggregate_many([{<<"alpha">>, <<"data1">>, <<"zulu">>},
-                                  {<<"beta">>, <<"data2">>, <<"yankee">>},
-                                  {<<"alpha">>, <<"data3">>, <<"xray">>},
-                                  {<<"charlie">>, <<"data4">>, <<"yankee">>},
-                                  {<<"beta">>, <<"data5">>, <<"zulu">>}]),
+    [AggRecord] =
+        aggregate_many([{<<"alpha">>, <<"data1">>, <<"zulu">>},
+                        {<<"beta">>, <<"data2">>, <<"yankee">>},
+                        {<<"alpha">>, <<"data3">>, <<"xray">>},
+                        {<<"charlie">>, <<"data4">>, <<"yankee">>},
+                        {<<"beta">>, <<"data5">>, <<"zulu">>}]),
     %% Reference values obtained using priv/kpl_agg_tests_helper.py.
     RefPK = <<"alpha">>,
     RefEHK = <<"zulu">>,
-    RefData = <<?KPL_AGG_MAGIC/binary, 10, 5, 97, 108, 112, 104, 97, 10, 4, 98, 101, 116, 97,
-                10, 7, 99, 104, 97, 114, 108, 105, 101, 18, 4, 122, 117, 108, 117, 18, 6, 121, 97,
-                110, 107, 101, 101, 18, 4, 120, 114, 97, 121, 26, 11, 8, 0, 16, 0, 26, 5, 100, 97,
-                116, 97, 49, 26, 11, 8, 1, 16, 1, 26, 5, 100, 97, 116, 97, 50, 26, 11, 8, 0, 16, 2,
-                26, 5, 100, 97, 116, 97, 51, 26, 11, 8, 2, 16, 1, 26, 5, 100, 97, 116, 97, 52, 26,
-                11, 8, 1, 16, 0, 26, 5, 100, 97, 116, 97, 53, 78, 67, 160, 206, 22, 1, 33, 154, 3,
-                6, 110, 235, 9, 229, 53, 100>>,
+    RefData =
+        <<?KPL_AGG_MAGIC/binary, 10, 5, 97, 108, 112, 104, 97, 10, 4, 98, 101, 116, 97, 10, 7, 99,
+          104, 97, 114, 108, 105, 101, 18, 4, 122, 117, 108, 117, 18, 6, 121, 97, 110, 107, 101,
+          101, 18, 4, 120, 114, 97, 121, 26, 11, 8, 0, 16, 0, 26, 5, 100, 97, 116, 97, 49, 26, 11,
+          8, 1, 16, 1, 26, 5, 100, 97, 116, 97, 50, 26, 11, 8, 0, 16, 2, 26, 5, 100, 97, 116, 97,
+          51, 26, 11, 8, 2, 16, 1, 26, 5, 100, 97, 116, 97, 52, 26, 11, 8, 1, 16, 0, 26, 5, 100, 97,
+          116, 97, 53, 78, 67, 160, 206, 22, 1, 33, 154, 3, 6, 110, 235, 9, 229, 53, 100>>,
     ?assertEqual({RefPK, RefData, RefEHK}, AggRecord),
     ok.
 
@@ -416,17 +423,19 @@ record_fullness_test() ->
     ok.
 
 full_record_test() ->
-    Fill = fun F(Acc) ->
-                   PK = integer_to_binary(rand:uniform(1000)),
-                   Data = << <<(integer_to_binary(rand:uniform(128)))/binary>>
-                              || _ <- lists:seq(1, 1 + rand:uniform(1000)) >>,
-                   case add(Acc, {PK, Data}) of
-                     {undefined, NAcc} ->
-                         F(NAcc);
-                     {Full, _} ->
-                         Full
-                   end
-           end,
+    Fill =
+        fun F(Acc) ->
+                PK = integer_to_binary(rand:uniform(1000)),
+                Data =
+                    << <<(integer_to_binary(rand:uniform(128)))/binary>>
+                       || _ <- lists:seq(1, 1 + rand:uniform(1000)) >>,
+                case add(Acc, {PK, Data}) of
+                    {undefined, NAcc} ->
+                        F(NAcc);
+                    {Full, _} ->
+                        Full
+                end
+        end,
     {PK, Data, _} = Fill(new()),
     Total = byte_size(PK) + byte_size(Data),
     ?assert(Total =< ?KINESIS_MAX_BYTES_PER_RECORD),
