@@ -64,10 +64,12 @@ input_properties_file_path() ->
 
 priv_path(Filename) ->
     Priv = code:priv_dir(erlmld),
-    lists:flatten(filename:join(Priv, Filename)).
+    lists:flatten(
+        filename:join(Priv, Filename)).
 
 tempdir_path(Filename) ->
-    filename:join(os:getenv("TMPDIR", "/tmp"), [erlmld, $/, Filename]).
+    filename:join(
+        os:getenv("TMPDIR", "/tmp"), [erlmld, $/, Filename]).
 
 %% given a map of option values, populate the MLD properties template, creating a file
 %% like "$TMPDIR/erlmld/erlmld.X.properties", where X is either "default" or the
@@ -116,21 +118,20 @@ apply_substitutions(Template, Opts) ->
                           Acc;
                       (K, V, Acc) ->
                           Var = iolist_to_binary("${" ++ string:to_upper(atom_to_list(K)) ++ "}"),
-                          Val =
-                              case V of
-                                  undefined ->
-                                      <<>>;
-                                  V when is_integer(V) ->
-                                      integer_to_binary(V);
-                                  V when is_atom(V) ->
-                                      atom_to_binary(V, utf8);
-                                  V when is_list(V) ->
-                                      iolist_to_binary(V);
-                                  V when is_binary(V) ->
-                                      V;
-                                  _ ->
-                                      <<>>
-                              end,
+                          Val = case V of
+                                    undefined ->
+                                        <<>>;
+                                    V when is_integer(V) ->
+                                        integer_to_binary(V);
+                                    V when is_atom(V) ->
+                                        atom_to_binary(V, utf8);
+                                    V when is_list(V) ->
+                                        iolist_to_binary(V);
+                                    V when is_binary(V) ->
+                                        V;
+                                    _ ->
+                                        <<>>
+                                end,
                           binary:replace(Acc, Var, Val, [global])
                   end,
                   Template,
@@ -139,12 +140,13 @@ apply_substitutions(Template, Opts) ->
         {match, Groups} ->
             {error,
              {unknown_variables,
-              sets:to_list(lists:foldl(fun ([_, {Start, Size}], Acc) ->
-                                               Name = binary:part(Data, {Start, Size}),
-                                               sets:add_element(Name, Acc)
-                                       end,
-                                       sets:new(),
-                                       Groups))}};
+              sets:to_list(
+                  lists:foldl(fun([_, {Start, Size}], Acc) ->
+                                 Name = binary:part(Data, {Start, Size}),
+                                 sets:add_element(Name, Acc)
+                              end,
+                              sets:new(),
+                              Groups))}};
         nomatch ->
             {ok, Data}
     end.
@@ -160,7 +162,8 @@ spam_mp() ->
          <<"com.amazonaws.services.kinesis.multilang.MessageWriter writeMessage$">>,
          <<"com.amazonaws.services.kinesis.multilang.MessageWriter call$">>,
          <<"com.amazonaws.services.kinesis.multilang.LineReaderTask call$">>],
-    re:compile(lists:join(<<"|">>, Spammy)).
+    re:compile(
+        lists:join(<<"|">>, Spammy)).
 
 is_spam(_, <<>>) ->
     true;

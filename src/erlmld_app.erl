@@ -7,7 +7,9 @@
 %% application callback.  load default configuration from application environment, and
 %% start erlmd_sup with that configuration.
 start(_StartType, []) ->
-    Opts = maps:from_list(application:get_all_env(erlmld)),
+    Opts =
+        maps:from_list(
+            application:get_all_env(erlmld)),
     erlmld_sup:start_link(Opts).
 
 stop(_State) ->

@@ -384,7 +384,8 @@ handle_event(?INTERNAL,
     error_logger:warning_msg("~p throttled during ~p; consider increasing state table write "
                              "capacity~n",
                              [WorkerState, CheckpointState]),
-    timer:sleep(rand:uniform(?RETRY_SLEEP)),
+    timer:sleep(
+        rand:uniform(?RETRY_SLEEP)),
     do_checkpoint(Data, Checkpoint, CheckpointState, []);
 handle_event(?INTERNAL,
              #{<<"action">> := <<"checkpoint">>, <<"error">> := CheckpointError},
@@ -509,7 +510,8 @@ do_checkpoint(Data,
               #checkpoint{sequence_number = SN} = Checkpoint,
               NextState,
               NextEvents) ->
-    Enc = jiffy:encode(maps:put(<<"action">>, <<"checkpoint">>, checkpoint_spec(Data, SN))),
+    Enc = jiffy:encode(
+              maps:put(<<"action">>, <<"checkpoint">>, checkpoint_spec(Data, SN))),
     {next_state,
      {?PEER_WRITE, NextState},
      Data#data{last_checkpoint = Checkpoint},
@@ -571,13 +573,12 @@ next_action(Bin, Data) ->
         {<<>>, NData, Rest} ->
             {undefined, NData, Rest};
         {Line, NData, Rest} ->
-            Dec =
-                try
-                    jiffy:decode(Line, [return_maps, {null_term, undefined}])
-                catch
-                    {error, Error} ->
-                        {error, Error}
-                end,
+            Dec = try
+                      jiffy:decode(Line, [return_maps, {null_term, undefined}])
+                  catch
+                      {error, Error} ->
+                          {error, Error}
+                  end,
             {Dec, NData, Rest}
     end.
 
@@ -629,8 +630,8 @@ stream_record(Record, PartitionKey, Data, SequenceNumber) ->
 
 deaggregate_kpl_records(R, Records) ->
     Base64Decoder = application:get_env(erlmld, base64_decoder, {base64, decode}),
-    lists:flatmap(fun (#{<<"data">> := RecordData} = Record) ->
-                          deaggregate_kpl_record(R, Record, b64decode(Base64Decoder, RecordData))
+    lists:flatmap(fun(#{<<"data">> := RecordData} = Record) ->
+                     deaggregate_kpl_record(R, Record, b64decode(Base64Decoder, RecordData))
                   end,
                   Records).
 
