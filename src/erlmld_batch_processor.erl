@@ -64,10 +64,7 @@
 
 initialize(Opts, ShardId, ISN) ->
     Defaults =
-        #{on_checkpoint =>
-              fun (_, _) ->
-                      ok
-              end,
+        #{on_checkpoint => fun(_, _) -> ok end,
           log_checkpoints => false,
           description => undefined,
           enable_subsequence_checkpoints => false},
@@ -225,9 +222,7 @@ note_success(#state{checkpointable = CPT} = State, Tokens) ->
     %% fixme; when adding a new element, also pop all smaller elements which have
     %% contiguous keys with the new element (only need to track gaps).
     NCPT =
-        lists:foldl(fun ({Counter, SeqNum}, Acc) ->
-                            gb_trees:insert(Counter, SeqNum, Acc)
-                    end,
+        lists:foldl(fun({Counter, SeqNum}, Acc) -> gb_trees:insert(Counter, SeqNum, Acc) end,
                     CPT,
                     Tokens),
     checkpointable(State, NCPT).
@@ -315,7 +310,9 @@ note_flush(State) ->
 
 %% given an erlang timestamp, return the elapsed duration in milliseconds.
 elapsed_ms(When) ->
-    trunc(timer:now_diff(os:timestamp(), When) / 1.0e3).
+    trunc(timer:now_diff(
+              os:timestamp(), When)
+              / 1.0e3).
 
 %% start a watchdog timer, cancelling any which is outstanding.  if the timer fires, it
 %% will result in the current process exiting with a reason of 'watchdog_timeout'
@@ -352,8 +349,11 @@ is_sub_record(_) ->
 -include_lib("eunit/include/eunit.hrl").
 
 equal_cpt(A, B) ->
-    maps:from_list(gb_trees:to_list(checkpointable(A))) ==
-        maps:from_list(gb_trees:to_list(checkpointable(B))).
+    maps:from_list(
+        gb_trees:to_list(checkpointable(A)))
+        ==
+        maps:from_list(
+            gb_trees:to_list(checkpointable(B))).
 
 checkpointing_test() ->
     State = #state{},
@@ -420,14 +420,14 @@ watchdog_test() ->
         {'EXIT', _, watchdog_timeout} ->
             error("unexpected watchdog trigger")
         after 100 ->
-                  ok
+            ok
     end,
     update_watchdog(State),
     receive
         {'EXIT', _, watchdog_timeout} ->
             ok
         after 400 ->
-                  error("watchdog failed to trigger")
+            error("watchdog failed to trigger")
     end.
 
 is_sub_record_test() ->

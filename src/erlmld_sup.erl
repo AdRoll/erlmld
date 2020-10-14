@@ -35,14 +35,13 @@ init([Regname,
 
     %% prepare MLD .properties file:
     {ok, PropertiesPathname} =
-        erlmld_runner:build_properties(maps:put(port, ActualPort, Opts)),
+        erlmld_runner:build_properties(
+            maps:put(port, ActualPort, Opts)),
 
     SupFlags = #{strategy => rest_for_one, intensity => 10, period => 10},
 
     StartWorker =
-        fun (AcceptedSocket) ->
-                erlmld_wrk_sup:start_worker(WorkerSupName, AcceptedSocket)
-        end,
+        fun(AcceptedSocket) -> erlmld_wrk_sup:start_worker(WorkerSupName, AcceptedSocket) end,
 
     WorkerSup =
         #{id => wrk_sup,

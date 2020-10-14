@@ -133,13 +133,11 @@ add(State, {PartitionKey, Data, ExplicitHashKey} = _Record) ->
 
 add_all(State, Records) ->
     {RevAggRecords, NState} =
-        lists:foldl(fun (Record, {RevAggRecords, Agg}) ->
-                            case add(Agg, Record) of
-                                {undefined, NewAgg} ->
-                                    {RevAggRecords, NewAgg};
-                                {AggRecord, NewAgg} ->
-                                    {[AggRecord | RevAggRecords], NewAgg}
-                            end
+        lists:foldl(fun(Record, {RevAggRecords, Agg}) ->
+                       case add(Agg, Record) of
+                           {undefined, NewAgg} -> {RevAggRecords, NewAgg};
+                           {AggRecord, NewAgg} -> {[AggRecord | RevAggRecords], NewAgg}
+                       end
                     end,
                     {[], State},
                     Records),
