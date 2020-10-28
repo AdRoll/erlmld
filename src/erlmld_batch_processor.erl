@@ -419,15 +419,15 @@ watchdog_test() ->
     receive
         {'EXIT', _, watchdog_timeout} ->
             error("unexpected watchdog trigger")
-        after 100 ->
-            ok
+    after 100 ->
+        ok
     end,
     update_watchdog(State),
     receive
         {'EXIT', _, watchdog_timeout} ->
             ok
-        after 400 ->
-            error("watchdog failed to trigger")
+    after 400 ->
+        error("watchdog failed to trigger")
     end.
 
 is_sub_record_test() ->
