@@ -131,7 +131,10 @@ checkpointed(#state{log_checkpoints = LogCheckpoints} = State,
     end,
     {ok, State}.
 
-shutdown(#state{description = Description, shard_id = ShardId, count = Count} = State,
+shutdown(#state{description = Description,
+                shard_id = ShardId,
+                count = Count} =
+             State,
          Reason) ->
     error_logger:info_msg("{~p,~p} (~p) shutting down, reason: ~p~n",
                           [Description, ShardId, Count, Reason]),
@@ -188,7 +191,10 @@ next_counter_checkpoint(State, N) ->
 flusher_state(State, FState) ->
     State#state{flusher_state = FState}.
 
-add_record(#state{count = Count, flusher_mod = FMod, flusher_state = FState} = State,
+add_record(#state{count = Count,
+                  flusher_mod = FMod,
+                  flusher_state = FState} =
+               State,
            #stream_record{sequence_number = SN} = Record) ->
     case FMod:add_record(FState, Record, {Count, SN}) of
         {ok, NFState} ->

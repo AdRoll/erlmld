@@ -235,7 +235,9 @@ add_record(#state{partition_keyset = PKSet,
     {PKIndex, NewPKSet} = get_or_add_key(PartitionKey, PKSet),
     {EHKIndex, NewEHKSet} = get_or_add_key(ExplicitHashKey, EHKSet),
     NewRecord =
-        #'Record'{partition_key_index = PKIndex, explicit_hash_key_index = EHKIndex, data = Data},
+        #'Record'{partition_key_index = PKIndex,
+                  explicit_hash_key_index = EHKIndex,
+                  data = Data},
     State#state{partition_keyset = NewPKSet,
                 explicit_hash_keyset = NewEHKSet,
                 rev_records = [NewRecord | RevRecords],
@@ -278,7 +280,9 @@ is_key(Key, #keyset{key_to_index = KeyToIndex} = _KeySet) ->
 get_or_add_key(undefined, KeySet) ->
     {undefined, KeySet};
 get_or_add_key(Key,
-               #keyset{rev_keys = RevKeys, rev_keys_length = Length, key_to_index = KeyToIndex} =
+               #keyset{rev_keys = RevKeys,
+                       rev_keys_length = Length,
+                       key_to_index = KeyToIndex} =
                    KeySet) ->
     case maps:get(Key, KeyToIndex, not_found) of
         not_found ->
