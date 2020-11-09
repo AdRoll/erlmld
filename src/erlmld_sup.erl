@@ -38,7 +38,10 @@ init([Regname,
         erlmld_runner:build_properties(
             maps:put(port, ActualPort, Opts)),
 
-    SupFlags = #{strategy => rest_for_one, intensity => 10, period => 10},
+    SupFlags =
+        #{strategy => rest_for_one,
+          intensity => 10,
+          period => 10},
 
     StartWorker =
         fun(AcceptedSocket) -> erlmld_wrk_sup:start_worker(WorkerSupName, AcceptedSocket) end,
