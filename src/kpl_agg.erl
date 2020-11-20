@@ -89,14 +89,18 @@ count(#state{num_user_records = Num} = _State) ->
     Num.
 
 size_bytes(#state{agg_size_bytes = Size, agg_partition_key = PK} = _State) ->
-    byte_size(?KPL_AGG_MAGIC) + Size + ?MD5_DIGEST_BYTES +
+    PKSize =
         case PK of
             undefined ->
                 0;
             _ ->
                 byte_size(PK)
-        end
-        + byte_size(kpl_agg_pb:encode_msg(#'AggregatedRecord'{})).
+        end,
+    byte_size(?KPL_AGG_MAGIC)
+    + Size
+    + ?MD5_DIGEST_BYTES
+    + PKSize
+    + byte_size(kpl_agg_pb:encode_msg(#'AggregatedRecord'{})).
 
 finish(#state{num_user_records = 0} = State) ->
     {undefined, State};

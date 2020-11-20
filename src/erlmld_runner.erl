@@ -76,15 +76,14 @@ tempdir_path(Filename) ->
 %% app_suffix value, and return that populated pathname.
 build_properties(#{app_suffix := AppSuffix} = Opts) ->
     Input = input_properties_file_path(),
-    Output =
-        tempdir_path("erlmld." ++
-                         atom_to_list(case AppSuffix of
-                                          undefined ->
-                                              default;
-                                          _ ->
-                                              AppSuffix
-                                      end)
-                             ++ ".properties"),
+    Suffix =
+        atom_to_list(case AppSuffix of
+                         undefined ->
+                             default;
+                         _ ->
+                             AppSuffix
+                     end),
+    Output = tempdir_path("erlmld." ++ Suffix ++ ".properties"),
     {ok, Template} = file:read_file(Input),
     {ok, Result} = apply_substitutions(Template, Opts),
     ok = filelib:ensure_dir(Output),

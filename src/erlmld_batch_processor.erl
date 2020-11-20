@@ -318,7 +318,7 @@ note_flush(State) ->
 elapsed_ms(When) ->
     trunc(timer:now_diff(
               os:timestamp(), When)
-              / 1.0e3).
+          / 1.0e3).
 
 %% start a watchdog timer, cancelling any which is outstanding.  if the timer fires, it
 %% will result in the current process exiting with a reason of 'watchdog_timeout'
@@ -357,7 +357,7 @@ is_sub_record(_) ->
 equal_cpt(A, B) ->
     maps:from_list(
         gb_trees:to_list(checkpointable(A)))
-        ==
+    ==
         maps:from_list(
             gb_trees:to_list(checkpointable(B))).
 
