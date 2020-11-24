@@ -316,9 +316,9 @@ note_flush(State) ->
 
 %% given an erlang timestamp, return the elapsed duration in milliseconds.
 elapsed_ms(When) ->
-    trunc(timer:now_diff(
-              os:timestamp(), When)
-          / 1.0e3).
+    timer:now_diff(
+        os:timestamp(), When)
+    div 1000.
 
 %% start a watchdog timer, cancelling any which is outstanding.  if the timer fires, it
 %% will result in the current process exiting with a reason of 'watchdog_timeout'
