@@ -16,3 +16,4 @@ _build
 .idea
 include/kpl_agg_pb.hrl
 src/kpl_agg_pb.erl
+doc/

@@ -108,7 +108,7 @@
 %% API
 -export([start_link/2, accept/2]).
 %% gen_statem callbacks
--export([init/1, callback_mode/0, terminate/3, code_change/4, handle_event/4]).
+-export([init/1, callback_mode/0, terminate/3, handle_event/4]).
 
 -record(data,
         {%% name of handler module implementing erlmld_worker behavior:
@@ -172,9 +172,6 @@ init([HandlerMod, HandlerData]) ->
 terminate(_Reason, _State, #data{socket = Socket}) ->
     gen_tcp:close(Socket),
     ok.
-
-code_change(_OldVsn, State, Data, _Extra) ->
-    {ok, State, Data}.
 
 %% a connection has been accepted.  start reading requests from it.
 handle_event({call, From}, {accepted, Socket}, ?INIT, Data) ->
@@ -290,8 +287,8 @@ handle_event(?INTERNAL,
                 {ok, _Checkpoint} ->
                     %% worker should only checkpoint during shutdown for a TERMINATE shutdown;
                     %% this isn't supported yet.
-                    error_logger:error_msg("~p attempted to checkpoint during shutdownRequest shutdown~n",
-                                           [WorkerState]),
+                    Format = "~p attempted to checkpoint during shutdownRequest shutdown~n",
+                    error_logger:error_msg(Format, [WorkerState]),
                     {stop, {error, unexpected_checkpoint}};
                 {_, {error, _} = Error} ->
                     {stop, Error}
@@ -576,7 +573,7 @@ next_action(Bin, Data) ->
             Dec = try
                       jiffy:decode(Line, [return_maps, {null_term, undefined}])
                   catch
-                      {error, Error} ->
+                      _:{error, Error} ->
                           {error, Error}
                   end,
             {Dec, NData, Rest}
