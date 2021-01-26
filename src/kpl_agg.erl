@@ -112,7 +112,7 @@ finish(#state{agg_partition_key = AggPK,
     {AggRecord, new(ShouldDeflate)}.
 
 add(State, {PartitionKey, Data} = _Record) ->
-    add(State, {PartitionKey, Data, create_explicit_hash_key(PartitionKey)});
+    add(State, {PartitionKey, Data, undefined});
 add(State, {PartitionKey, Data, ExplicitHashKey} = _Record) ->
     case {calc_record_size(State, PartitionKey, Data, ExplicitHashKey), size_bytes(State)} of
         {RecSize, _} when RecSize > ?KINESIS_MAX_BYTES_PER_RECORD ->
@@ -150,16 +150,6 @@ add_all(State, Records) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-
-%% Calculate a new explicit hash key based on the input partition key
-%% (following the algorithm from the original KPL).
-create_explicit_hash_key(_PartitionKey) ->
-    %% Their python implementation [1] is broken compared to the C++
-    %% implementation [2]. But we don't care about EHKs anyway.
-    %% [1] https://github.com/awslabs/kinesis-aggregation/blob/db92620e435ad9924356cda7d096e3c888f0f72f/python/aws_kinesis_agg/aggregator.py#L447-L458
-    %% [2] https://github.com/awslabs/amazon-kinesis-producer/blob/ea1e49218e1a11f1b462662a1db4cc06ddad39bb/aws/kinesis/core/user_record.cc#L36-L45
-    %% FIXME: Implement the actual algorithm from KPL.
-    undefined.
 
 %% Calculate how many extra bytes the given user record would take, when added
 %% to the current aggregated record. This calculation has to know about KPL and
