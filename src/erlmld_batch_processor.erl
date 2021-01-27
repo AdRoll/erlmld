@@ -357,9 +357,8 @@ is_sub_record(_) ->
 equal_cpt(A, B) ->
     maps:from_list(
         gb_trees:to_list(checkpointable(A)))
-    ==
-        maps:from_list(
-            gb_trees:to_list(checkpointable(B))).
+    == maps:from_list(
+           gb_trees:to_list(checkpointable(B))).
 
 checkpointing_test() ->
     State = #state{},
