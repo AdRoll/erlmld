@@ -1,103 +1,78 @@
-{application, erlmld,
- [{description, "An Erlang library for processing multiple Kinesis and "
+{application,
+ erlmld,
+ [{description,
+   "An Erlang library for processing multiple Kinesis and "
    "DynamoDB streams and shards in a single node using the Kinesis Client "
    "Library and MultiLangDaemon."},
   {vsn, "git"},
   {maintainers, ["AdRoll RTB team <rtb-team+erlmld@adroll.com>"]},
   {licenses, ["BSD 3-Clause License"]},
   {links, [{"Github", "https://github.com/AdRoll/erlmld"}]},
-  {exclude_files, ["priv/jars", "priv/ddb_jars", "priv/kcl_jars",
-                   "src/kpl_agg_pb.erl", "include/kpl_agg_pb.hrl"]},
+  {exclude_files,
+   ["priv/jars",
+    "priv/ddb_jars",
+    "priv/kcl_jars",
+    "src/kpl_agg_pb.erl",
+    "include/kpl_agg_pb.hrl"]},
   %% note: these names are only registered if app_suffix is undefined.  otherwise, these
   %% are the prefixes of names which are registered:
-  {registered, [erlmld_sup,
-                erlmld_wrk_sup,
-                erlmld_runner,
-                erlmld_tcp_acceptor]},
+  {registered, [erlmld_sup, erlmld_wrk_sup, erlmld_runner, erlmld_tcp_acceptor]},
   {mod, {erlmld_app, []}},
-  {applications,
-   [kernel,
-    stdlib,
-    crypto,
-    erlexec,
-    jiffy]},
+  {applications, [kernel, stdlib, crypto, erlexec, jiffy]},
   {modules, []},
-  {env, [
-         %% if nonzero, use a specific listen port instead of a random one:
-         {listen_port, 0},
-         {listen_ip, loopback},
-
-         %% name of a module implementing the erlmld_worker behavior:
-         {record_processor, erlmld_noisy_wrk},
-
-         %% opaque term supplied to record processor during init:
-         {record_processor_data, undefined},
-
-         %% if 'true', kcl logspam will be printed to the console.  if a tuple {Mod,
-         %% Sink}, kcl logspam will be logged at level 'debug' using that lager-compatible
-         %% module and sink (one call per line).
-         {log_kcl_spam, undefined},
-
-         %% atom suffix which will be used to construct mld properties filename and also
-         %% appended to registered names if defined:
-         {app_suffix, undefined},
-
-         %% binary application name, used by the KCL as lease table name:
-         {kcl_appname, undefined},
-
-         %% binary kinesis stream name or dynamodb stream arn:
-         {stream_name, undefined},
-         {stream_region, undefined},
-
-         %% type of stream: 'dynamo' or 'kinesis'
-         {stream_type, undefined},
-
-         %% identifier for this worker, auto-assigned by KCL if undefined:
-         {worker_id, undefined},
-
-         %% initial stream position when first opening a shard:
-         {initial_position, <<"LATEST">>},
-
-         %% max records to fetch per batch (max for dynamo is 1000, kinesis 10000):
-         {max_records, 1000},
-
-         %% idle time in ms between reads:
-         {idle_time, 1000},
-
-         %% maximum checkpoint retry sleep duration in ms:
-         {checkpoint_retry_sleep, 5000},
-
-         %% if true, we can checkpoint a sub-record of an aggregate record:
-         {enable_subsequence_checkpoints, false},
-
-         %% Users can change the credentials provider the KCL will use to retrieve credentials.
-         %% The DefaultAWSCredentialsProviderChain checks several other providers, which is
-         %% described here:
-         %% http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html
-         %% If you need to provide a profile name: <<"com.amazonaws.auth.profile.ProfileCredentialsProvider|<profile-name>">>
-         {aws_credentials_provider, <<"DefaultAWSCredentialsProviderChain">>},
-
-         %% comma-separated list of enabled cloudwatch dimensions, see kinesis developer guide:
-         {metrics_dimensions, <<"Operation">>},
-
-         %% cloudwatch metrics level, NONE, SUMMARY, or DETAILED:
-         {metrics_level, <<"SUMMARY">>},
-
-         %% lease failover time in milliseconds.  increase for high-shard-count streams:
-         {failover_time, 10000},
-
-         %% max number of leases to steal at any one time.  kcl default is 1.
-         {max_lease_theft, 2},
-
-         %% time between shard sync tasks in milliseconds, default is 60s:
-         {shard_sync_time, 60000},
-
-         %% if true, don't fail if kcl encounters child shards with open parents, which
-         %% can occur when processing dynamo streams on very large tables (requires
-         %% patched KCL):
-         {ignore_unexpected_child_shards, false},
-
-         %% base64 decoder {mod, fun}
-         {base64_decoder, {base64, decode}}
-        ]}
- ]}.
+  {env,
+   [%% if nonzero, use a specific listen port instead of a random one:
+    {listen_port, 0},
+    {listen_ip, loopback},
+    %% name of a module implementing the erlmld_worker behavior:
+    {record_processor, erlmld_noisy_wrk},
+    %% opaque term supplied to record processor during init:
+    {record_processor_data, undefined},
+    %% if 'true', kcl logspam will be printed to the console.  if a tuple {Mod,
+    %% Sink}, kcl logspam will be logged at level 'debug' using that lager-compatible
+    %% module and sink (one call per line).
+    {log_kcl_spam, undefined},
+    %% atom suffix which will be used to construct mld properties filename and also
+    %% appended to registered names if defined:
+    {app_suffix, undefined},
+    %% binary application name, used by the KCL as lease table name:
+    {kcl_appname, undefined},
+    %% binary kinesis stream name or dynamodb stream arn:
+    {stream_name, undefined},
+    {stream_region, undefined},
+    %% type of stream: 'dynamo' or 'kinesis'
+    {stream_type, undefined},
+    %% identifier for this worker, auto-assigned by KCL if undefined:
+    {worker_id, undefined},
+    %% initial stream position when first opening a shard:
+    {initial_position, <<"LATEST">>},
+    %% max records to fetch per batch (max for dynamo is 1000, kinesis 10000):
+    {max_records, 1000},
+    %% idle time in ms between reads:
+    {idle_time, 1000},
+    %% maximum checkpoint retry sleep duration in ms:
+    {checkpoint_retry_sleep, 5000},
+    %% if true, we can checkpoint a sub-record of an aggregate record:
+    {enable_subsequence_checkpoints, false},
+    %% Users can change the credentials provider the KCL will use to retrieve credentials.
+    %% The DefaultAWSCredentialsProviderChain checks several other providers, which is
+    %% described here:
+    %% http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html
+    %% If you need to provide a profile name: <<"com.amazonaws.auth.profile.ProfileCredentialsProvider|<profile-name>">>
+    {aws_credentials_provider, <<"DefaultAWSCredentialsProviderChain">>},
+    %% comma-separated list of enabled cloudwatch dimensions, see kinesis developer guide:
+    {metrics_dimensions, <<"Operation">>},
+    %% cloudwatch metrics level, NONE, SUMMARY, or DETAILED:
+    {metrics_level, <<"SUMMARY">>},
+    %% lease failover time in milliseconds.  increase for high-shard-count streams:
+    {failover_time, 10000},
+    %% max number of leases to steal at any one time.  kcl default is 1.
+    {max_lease_theft, 2},
+    %% time between shard sync tasks in milliseconds, default is 60s:
+    {shard_sync_time, 60000},
+    %% if true, don't fail if kcl encounters child shards with open parents, which
+    %% can occur when processing dynamo streams on very large tables (requires
+    %% patched KCL):
+    {ignore_unexpected_child_shards, false},
+    %% base64 decoder {mod, fun}
+    {base64_decoder, {base64, decode}}]}]}.
