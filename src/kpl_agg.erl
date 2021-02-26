@@ -23,7 +23,7 @@
 %%%         end
 %%%
 %%%     You can also use kpl:add_all to add multiple records at once. A
-%%%     `Record` is a {PartitionKey, Data} tuple or a {PartitionKey, Data,
+%%%     <pre>Record</pre> is a {PartitionKey, Data} tuple or a {PartitionKey, Data,
 %%%     ExplicitHashKey} tuple.
 %%%
 %%%     Getting the current aggregated record (e.g. to get the last aggregated
