@@ -51,6 +51,8 @@
 
 -include("erlmld.hrl").
 
+-export([initialize/4, ready/2, process_record/3, checkpointed/4, shutdown/3]).
+
 -callback initialize(term(), shard_id(), sequence_number() | undefined) ->
                         {ok, worker_state()} | {error, term()}.
 -callback ready(worker_state()) ->
@@ -63,3 +65,28 @@
                           {ok, worker_state()} | {error, term()}.
 -callback shutdown(worker_state(), shutdown_reason()) ->
                       ok | {ok, checkpoint()} | {error, term()}.
+
+-spec initialize(module(), term(), shard_id(), sequence_number() | undefined) ->
+                    {ok, worker_state()} | {error, term()}.
+initialize(Mod, HandlerData, ShardId, ISN) ->
+    Mod:initialize(HandlerData, ShardId, ISN).
+
+-spec ready(module(), worker_state()) ->
+               {ok, worker_state()} | {ok, worker_state(), checkpoint()} | {error, term()}.
+ready(Mod, WorkerState) ->
+    Mod:ready(WorkerState).
+
+-spec process_record(module(), worker_state(), stream_record()) ->
+                        {ok, worker_state()} | {ok, worker_state(), checkpoint()} | {error, term()}.
+process_record(Mod, WorkerState, Record) ->
+    Mod:process_record(WorkerState, Record).
+
+-spec checkpointed(module(), worker_state(), sequence_number(), checkpoint()) ->
+                      {ok, worker_state()} | {error, term()}.
+checkpointed(Mod, WorkerState, SeqNumber, Checkpoint) ->
+    Mod:checkpointed(WorkerState, SeqNumber, Checkpoint).
+
+-spec shutdown(module(), worker_state(), shutdown_reason()) ->
+                  ok | {ok, checkpoint()} | {error, term()}.
+shutdown(Mod, WorkerState, Reason) ->
+    Mod:shutdown(WorkerState, Reason).

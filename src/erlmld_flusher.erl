@@ -48,6 +48,8 @@
 
 -include("erlmld.hrl").
 
+-export([init/3, add_record/4, flush/3, heartbeat/2]).
+
 -callback init(shard_id(), term()) -> flusher_state().
 -callback add_record(flusher_state(), stream_record(), flusher_token()) ->
                         {ok, flusher_state()} | {ignored, flusher_state()} | {error, full | term()}.
@@ -55,3 +57,22 @@
                    {ok, flusher_state(), [flusher_token()]} | {error, term()}.
 -callback heartbeat(flusher_state()) ->
                        {ok, flusher_state(), [flusher_token()]} | {error, term()}.
+
+-spec init(module(), shard_id(), term()) -> flusher_state().
+init(Mod, ShardId, Arg) ->
+    Mod:init(ShardId, Arg).
+
+-spec add_record(module(), flusher_state(), stream_record(), flusher_token()) ->
+                    {ok, flusher_state()} | {ignored, flusher_state()} | {error, full | term()}.
+add_record(Mod, State, Record, Token) ->
+    Mod:add_record(State, Record, Token).
+
+-spec flush(module(), flusher_state(), partial | full) ->
+               {ok, flusher_state(), [flusher_token()]} | {error, term()}.
+flush(Mod, State, Mode) ->
+    Mod:flush(State, Mode).
+
+-spec heartbeat(module(), flusher_state()) ->
+                   {ok, flusher_state(), [flusher_token()]} | {error, term()}.
+heartbeat(Mod, State) ->
+    Mod:heartbeat(State).
