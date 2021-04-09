@@ -80,7 +80,7 @@ initialize(Opts, ShardId, ISN) ->
         maps:merge(Defaults, Opts),
     State =
         #state{flusher_mod = FlusherMod,
-               flusher_state = FlusherMod:init(ShardId, FlusherModData),
+               flusher_state = erlmld_flusher:init(FlusherMod, ShardId, FlusherModData),
                on_checkpoint = OnCheckpoint,
                log_checkpoints = LogCheckpoints,
                description = Description,
@@ -94,7 +94,7 @@ initialize(Opts, ShardId, ISN) ->
     {ok, update_watchdog(State)}.
 
 ready(#state{flusher_mod = FMod, flusher_state = FState} = State) ->
-    {ok, NFState, Tokens} = FMod:heartbeat(FState),
+    {ok, NFState, Tokens} = erlmld_flusher:heartbeat(FMod, FState),
     NState = flusher_state(State, NFState),
     NNState =
         case Tokens of
@@ -196,7 +196,7 @@ add_record(#state{count = Count,
                   flusher_state = FState} =
                State,
            #stream_record{sequence_number = SN} = Record) ->
-    case FMod:add_record(FState, Record, {Count, SN}) of
+    case erlmld_flusher:add_record(FMod, FState, Record, {Count, SN}) of
         {ok, NFState} ->
             {ok, incr_count(flusher_state(State, NFState))};
         {ignored, NFState} ->
@@ -212,7 +212,7 @@ flush_full(State) ->
     flush(State, full).
 
 flush(#state{flusher_mod = FMod, flusher_state = FState} = State, Kind) ->
-    {ok, NFState, Tokens} = FMod:flush(FState, Kind),
+    {ok, NFState, Tokens} = erlmld_flusher:flush(FMod, FState, Kind),
     NState = flusher_state(State, NFState),
     note_success(note_flush(NState), Tokens).
 

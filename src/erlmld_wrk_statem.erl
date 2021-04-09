@@ -224,7 +224,7 @@ handle_event(?INTERNAL,
                    worker_state = undefined} =
                  Data) ->
     ISN = sequence_number(R),
-    case HandlerMod:initialize(HandlerData, ShardId, ISN) of
+    case erlmld_worker:initialize(HandlerMod, HandlerData, ShardId, ISN) of
         {ok, WorkerState} ->
             success(R, worker_state(Data, WorkerState), ?REQUEST);
         {error, _} = Error ->
@@ -249,7 +249,7 @@ handle_event(?INTERNAL,
             _ ->
                 unknown
         end,
-    case {Reason, Mod:shutdown(WorkerState, Reason)} of
+    case {Reason, erlmld_worker:shutdown(Mod, WorkerState, Reason)} of
         {terminate, {ok, Checkpoint}} ->
             %% shard terminating.  worker supplied a checkpoint.  checkpoint and then
             %% return a success response for the shutdown if the checkpoint was
@@ -280,7 +280,7 @@ handle_event(?INTERNAL,
              #data{handler_module = Mod, worker_state = WS} = Data) ->
     case WS of
         {ok, WorkerState} ->
-            case Mod:shutdown(WorkerState, zombie) of
+            case erlmld_worker:shutdown(Mod, WorkerState, zombie) of
                 ok ->
                     %% non-terminate shutdown, worker did not checkpoint; normal exit.
                     success(R, Data, ?SHUTDOWN);
@@ -307,7 +307,7 @@ handle_event(?INTERNAL,
              #{<<"action">> := <<"processRecords">>, <<"records">> := Records} = R,
              {?DISPATCH, ?REQUEST},
              #data{handler_module = Mod, worker_state = {ok, WorkerState}} = Data) ->
-    case Mod:ready(WorkerState) of
+    case erlmld_worker:ready(Mod, WorkerState) of
         {error, _} = Error ->
             {stop, Error};
         Ready ->
@@ -401,7 +401,7 @@ handle_event(?INTERNAL,
                  Data)
     when CheckpointState == ?CHECKPOINT; CheckpointState == ?SHUTDOWN_CHECKPOINT ->
     SN = sequence_number(R),
-    case Mod:checkpointed(WorkerState, SN, Checkpoint) of
+    case erlmld_worker:checkpointed(Mod, WorkerState, SN, Checkpoint) of
         {ok, NWorkerState} ->
             NData = worker_state(Data, NWorkerState),
             case CheckpointState of
@@ -429,7 +429,7 @@ handle_event(?INTERNAL,
              {process, R, [Record | Records]},
              ?PROCESS_RECORDS,
              #data{handler_module = Mod, worker_state = {ok, WorkerState}} = Data) ->
-    case Mod:process_record(WorkerState, Record) of
+    case erlmld_worker:process_record(Mod, WorkerState, Record) of
         {ok, NWorkerState} ->
             process_records(R, worker_state(Data, NWorkerState), Records);
         {ok, NWorkerState, Checkpoint} ->
