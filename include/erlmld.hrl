@@ -1,7 +1,3 @@
--ifndef(ERLMLD_HRL).
-
--define(ERLMLD_HRL, true).
-
 -record(sequence_number,
         {%% overall record sequence number:
          base :: undefined | non_neg_integer() | atom(),
@@ -45,5 +41,3 @@
 %% magic number identifying deflate-compressed KPL record, compressed using
 %% zlib:compress/1.  the KPL checksum trailer is included in the deflated data.
 -define(KPL_AGG_MAGIC_DEFLATED, <<16#01, 16#89, 16#9A, 16#C2>>).
-
--endif.
