@@ -42,7 +42,7 @@ download () {
         fi
     done
     POM="$DESTDIR/$PKG-$VERSION.pom"
-    mvn -B -f "$POM" dependency:copy-dependencies -DoutputDirectory="$DESTDIR"
+    mvn -B -f "$POM" dependency:copy-dependencies -DoutputDirectory="$DESTDIR" -DincludeScope=runtime
 }
 
 download "$DYNAMO_DESTDIR" "$DYNAMO_PKG" "$DYNAMO_VERSION"
