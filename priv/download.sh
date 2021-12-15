@@ -12,11 +12,11 @@ cd "$(dirname $0)"
 R="$(pwd)"
 
 DYNAMO_PKG="dynamodb-streams-kinesis-adapter"
-DYNAMO_VERSION="1.4.0"
+DYNAMO_VERSION="1.5.3"
 DYNAMO_DESTDIR="$R/ddb_jars"
 
 KCL_PKG="amazon-kinesis-client"
-KCL_VERSION="1.9.1"
+KCL_VERSION="1.14.5"
 KCL_DESTDIR="$R/kcl_jars"
 
 BASE="http://search.maven.org/remotecontent?filepath="
@@ -42,7 +42,7 @@ download () {
         fi
     done
     POM="$DESTDIR/$PKG-$VERSION.pom"
-    mvn -B -f "$POM" dependency:copy-dependencies -DoutputDirectory="$DESTDIR"
+    mvn -B -f "$POM" dependency:copy-dependencies -DoutputDirectory="$DESTDIR" -DincludeScope=runtime
 }
 
 download "$DYNAMO_DESTDIR" "$DYNAMO_PKG" "$DYNAMO_VERSION"
