@@ -9,7 +9,7 @@
 
 -module(erlmld_noisy_wrk).
 
--behavior(erlmld_worker).
+-behaviour(erlmld_worker).
 
 -export([initialize/3, ready/1, process_record/2, checkpointed/3, shutdown/2]).
 
