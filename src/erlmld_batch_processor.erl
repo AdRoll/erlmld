@@ -28,7 +28,7 @@
 %%% based on original code by Mike Watters <mike.watters@adroll.com>
 -module(erlmld_batch_processor).
 
--behavior(erlmld_worker).
+-behaviour(erlmld_worker).
 
 -export([initialize/3, ready/1, process_record/2, checkpointed/3, shutdown/2]).
 
