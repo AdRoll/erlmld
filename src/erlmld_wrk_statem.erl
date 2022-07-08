@@ -103,6 +103,9 @@
 %%%-------------------------------------------------------------------
 -module(erlmld_wrk_statem).
 
+%% The usage of throw here is intentional because gen_statem knows how to handle throws
+-elvis([{elvis_style, no_throw, disable}]).
+
 -behaviour(gen_statem).
 
 %% API
