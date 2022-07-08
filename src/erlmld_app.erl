@@ -17,9 +17,5 @@ stop(_State) ->
 
 ensure_all_deps_started() ->
     {ok, Deps} = application:get_key(erlmld, applications),
-    lists:foreach(fun(Dep) ->
-                     {ok, Started} = application:ensure_all_started(Dep),
-                     Started
-                  end,
-                  Deps),
+    lists:foreach(fun(Dep) -> {ok, _} = application:ensure_all_started(Dep) end, Deps),
     ok.
