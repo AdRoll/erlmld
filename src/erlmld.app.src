@@ -5,8 +5,7 @@
    "DynamoDB streams and shards in a single node using the Kinesis Client "
    "Library and MultiLangDaemon."},
   {vsn, "git"},
-  {maintainers, ["AdRoll RTB team <rtb-team+erlmld@adroll.com>"]},
-  {licenses, ["BSD 3-Clause License"]},
+  {licenses, ["BSD-3-Clause"]},
   {links, [{"Github", "https://github.com/AdRoll/erlmld"}]},
   {exclude_files,
    ["priv/jars",
