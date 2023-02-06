@@ -680,8 +680,8 @@ decode_kpl_protobuf_message(#{<<"sequenceNumber">> := SN} = AggRecord, ProtoMsg)
                    element(PKIndex + 1, PKs),
                    Data,
                    sequence_number(SN, SubSeq, SSN, length(Records)))
-     || {#'Record'{partition_key_index = PKIndex, data = Data} = _Record, SSN}
-            <- lists:zip(Records, lists:seq(0, length(Records) - 1))].
+     || {SSN, #'Record'{partition_key_index = PKIndex, data = Data} = _Record}
+            <- lists:enumerate(0, Records)].
 
 %% decode a sequence number string to an integer if possible, or an atom.  this is done to
 %% save space.
