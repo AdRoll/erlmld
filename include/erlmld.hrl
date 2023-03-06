@@ -1,3 +1,6 @@
+%% @todo [RTI-14087] Remove this when the records become ODSs
+-elvis([{elvis_style, no_types, disable}]).
+
 -record(sequence_number,
         {%% overall record sequence number:
          base :: undefined | non_neg_integer() | atom(),
