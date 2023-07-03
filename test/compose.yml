@@ -1,0 +1,68 @@
+services:
+  ca:
+    build: ./compose/ca
+    volumes:
+      - type: volume
+        source: certs
+        target: /certs
+    healthcheck:
+      test: ["CMD", "/ca/check_cert.sh"]
+      interval: 1s
+    stop_signal: SIGKILL
+  tests:
+    build: ./compose/test_runner
+    depends_on:
+      ca:
+        condition: service_healthy
+      kinesis:
+        condition: service_started
+    networks:
+      - local_kinesis
+    volumes:
+      - type: volume
+        source: certs
+        target: /certs
+      - type: bind
+        source: ${TEST_DIR:-../}
+        target: /home/work
+    environment:
+      ERL_AFLAGS: "-enable-feature all"
+      AWS_CBOR_DISABLE: 1
+    command: ${TEST_COMMAND:-rebar3 do clean,compile,eunit,ct}
+  dynamo:
+    build: ./compose/dynamo
+    depends_on:
+      ca:
+        condition: service_healthy
+    domainname: dynamodb.us-east-1.amazonaws.com
+    networks:
+      local_kinesis:
+        aliases:
+          - dynamodb.us-east-1.amazonaws.com
+    volumes:
+      - type: volume
+        source: certs
+        target: /usr/local/lib/node_modules/dynalite/ssl
+    stop_signal: SIGKILL
+  kinesis:
+    build: ./compose/kinesis
+    depends_on:
+      ca:
+        condition: service_healthy
+    domainname: kinesis.us-east-1.amazaonaws.com
+    networks:
+      local_kinesis:
+        aliases:
+          - kinesis.us-east-1.amazonaws.com
+          - 000000000000.data-kinesis.us-east-1.amazonaws.com
+    volumes:
+      - type: volume
+        source: certs
+        target: /usr/local/lib/node_modules/kinesalite/ssl
+    stop_signal: SIGKILL
+
+networks:
+  local_kinesis:
+
+volumes:
+  certs:

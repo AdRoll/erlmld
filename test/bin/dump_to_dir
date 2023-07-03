@@ -1,0 +1,24 @@
+#!/bin/bash
+if [ $# -ne 2 ]; then
+    echo "usage: $(basename $0) <stream name> <directory>" >&2
+    exit 1
+fi
+STREAM_NAME=$1
+DIR=$2
+aws kinesis list-shards --stream-name ${STREAM_NAME} \
+      --query 'Shards[*].[ShardId, SequenceNumberRange.StartingSequenceNumber]' --output text |
+    while read shard sequence; do
+        iterator=$(aws kinesis get-shard-iterator --stream-name ${STREAM_NAME} \
+                       --shard-id $shard --shard-iterator-type AT_SEQUENCE_NUMBER \
+                       --starting-sequence-number $sequence \
+                       --query "ShardIterator" --output text)
+        #echo $iterator
+        aws kinesis get-records --stream-name ${STREAM_NAME} \
+            --shard-iterator ${iterator} --query "Records[].[PartitionKey,Data]" --output text |
+            while read key data; do
+                echo -n "${key} $(echo -n ${data} | wc -c)"
+                out="${DIR}/$key"
+                echo "${data}" | base64 -d > ${out}
+                echo " --> $(cat ${out} | wc -c) bytes"
+            done
+    done
