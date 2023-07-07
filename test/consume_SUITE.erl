@@ -151,16 +151,25 @@ delete_stream(StreamName) ->
 load_records(StreamName, Dir) ->
     run_helper([test, bin, load_from_dir], [StreamName, get_path(Dir)]).
 
--define(ERRTAG, "OSCMDERR").
+-define(ERRTAG(Str), "OSCMDERR" ++ Str ++ "OSCMDEND").
 
 run_helper([_ | _] = Script, Args) ->
     run_helper_(get_path(Script), Args);
 run_helper(Script, Args) ->
     run_helper([Script], Args).
 
-run_helper_( Script , Args ) -> Cmd = string : join( [ Script | fixup_path_items( Args ) ] , " " ) , ct : pal( "Running \"~s\"" , [ Cmd ] ) , Output = os : cmd( Cmd ++ "|| echo " ?ERRTAG "$?" ?ERRTAG ) , case re : run( Output , helper_re_( ) , [ { capture , all_but_first , binary } ] ) of { match , [ ErrOut , Status ] } -> ct : fail( "Failed with status ~s:~n~s" , [ Status , ErrOut ] ) ; nomatch -> ct : pal( "Success:~n~s" , [ Output ] ) end .
+run_helper_(Script, Args) ->
+    Cmd = string:join([Script | fixup_path_items(Args)], " "),
+    ct:pal("Running \"~s\"", [Cmd]),
+    Output = os:cmd(Cmd ++ "|| echo " ++ ?ERRTAG("$?")),
+    case re:run(Output, helper_re_(), [{capture, all_but_first, binary}]) of
+        {match, [ErrOut, Status]} ->
+            ct:fail("Failed with status ~s:~n~s", [Status, ErrOut]);
+        nomatch ->
+            ct:pal("Success:~n~s", [Output])
+    end.
 
-helper_re_( ) -> { ok , P } = re : compile( "(.*)" ?ERRTAG "(.*)" ?ERRTAG , [ anchored , dotall ] ) , P .
+helper_re_( ) -> { ok , P } = re : compile( "(.*)" ++ ?ERRTAG("(.*)") , [ anchored , dotall ] ) , P .
 
 get_path(Components) ->
     filename:join(fixup_path_items(Components)).

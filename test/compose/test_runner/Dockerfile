@@ -7,13 +7,6 @@ RUN DEBIAN_FRONTEND=noninteractive \
 RUN mkdir /home/work
 WORKDIR /home/work
 
-
-
-# RUN cd /tmp && \
-#    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-#    unzip awscliv2.zip && \
-#    ./aws/install
-
 RUN mkdir /build && cd /build && \
     pip3 install 'flit_core>=3.7.1,<3.8.1' && \
     curl https://awscli.amazonaws.com/awscli.tar.gz -o awscli.tar.gz && \

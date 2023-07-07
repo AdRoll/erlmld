@@ -2,7 +2,6 @@ FROM docker.io/node:20.3-bullseye
 
 ENV AWS_DEFAULT_REGION "us-east-1"
 ENV NODE_ENV production
-#ENV NODE_PENDING_DEPRECATION 1
 ENV NPM_CONFIG_CACHE /data
 
 WORKDIR /data

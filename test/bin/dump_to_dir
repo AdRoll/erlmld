@@ -12,7 +12,6 @@ aws kinesis list-shards --stream-name ${STREAM_NAME} \
                        --shard-id $shard --shard-iterator-type AT_SEQUENCE_NUMBER \
                        --starting-sequence-number $sequence \
                        --query "ShardIterator" --output text)
-        #echo $iterator
         aws kinesis get-records --stream-name ${STREAM_NAME} \
             --shard-iterator ${iterator} --query "Records[].[PartitionKey,Data]" --output text |
             while read key data; do
