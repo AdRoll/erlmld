@@ -24,7 +24,7 @@ services:
         target: /certs
       - type: bind
         source: ${TEST_DIR:-../}
-        target: /home/work
+        target: /home/work/code
     environment:
       ERL_AFLAGS: "-enable-feature all"
       AWS_CBOR_DISABLE: 1
