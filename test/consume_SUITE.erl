@@ -169,7 +169,9 @@ run_helper_(Script, Args) ->
             ct:pal("Success:~n~s", [Output])
     end.
 
-helper_re_( ) -> { ok , P } = re : compile( "(.*)" ++ ?ERRTAG("(.*)") , [ anchored , dotall ] ) , P .
+helper_re_() ->
+    {ok, P} = re:compile("(.*)" ++ ?ERRTAG("(.*)"), [anchored, dotall]),
+    P.
 
 get_path(Components) ->
     filename:join(fixup_path_items(Components)).
