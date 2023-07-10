@@ -1,4 +1,4 @@
-FROM docker.io/node:20.3-bullseye
+FROM docker.io/node:18-bullseye
 
 ENV AWS_DEFAULT_REGION "us-east-1"
 ENV NODE_ENV production
