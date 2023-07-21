@@ -49,7 +49,7 @@ services:
     depends_on:
       ca:
         condition: service_healthy
-    domainname: kinesis.us-east-1.amazaonaws.com
+    domainname: kinesis.us-east-1.amazonaws.com
     networks:
       local_kinesis:
         aliases:

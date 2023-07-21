@@ -1,4 +1,4 @@
-FROM erlang:25
+FROM --platform=linux/amd64 erlang:25
 
 RUN DEBIAN_FRONTEND=noninteractive \
     apt-get update && \
