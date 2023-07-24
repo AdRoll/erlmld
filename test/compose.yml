@@ -10,7 +10,9 @@ services:
       interval: 1s
     stop_signal: SIGKILL
   tests:
-    build: ./compose/test_runner
+    build:
+      context: ..
+      dockerfile: ./test/compose/test_runner/Dockerfile
     depends_on:
       ca:
         condition: service_healthy
@@ -22,12 +24,10 @@ services:
       - type: volume
         source: certs
         target: /certs
-      - type: bind
-        source: ${TEST_DIR:-../}
-        target: /home/work/code
     environment:
       ERL_AFLAGS: "-enable-feature all"
       AWS_CBOR_DISABLE: 1
+      SHELL: "bash"
     command: ${TEST_COMMAND:-rebar3 do clean,compile,eunit,ct}
   dynamo:
     build: ./compose/dynamo
