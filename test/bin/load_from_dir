@@ -1,0 +1,34 @@
+#!/bin/bash
+set -x
+if [ $# -ne 2 ]; then
+    echo "usage: $(basename $0) <stream name> <directory>" >&2
+    exit 1
+fi
+STREAM_NAME=$1
+DIR=$2
+JSON=$(mktemp)
+cat <<EOF >$JSON
+{
+  "StreamName": "${STREAM_NAME}",
+  "Records": [
+EOF
+SEP=""
+for file in $DIR/*; do
+    if [ -f $file ]; then
+        path=$(realpath $file)
+        echo -ne "${SEP}" >>$JSON
+        cat <<EOF >>$JSON
+    {
+      "PartitionKey": "${file}",
+EOF
+        echo -n "      \"Data\": \"$(base64 -w 0 ${path})\"    }" >> $JSON
+        SEP=",\\n"
+    fi
+done
+cat <<EOF >>$JSON
+
+  ]
+}
+EOF
+
+aws kinesis put-records --stream-name ${STREAM_NAME} --cli-input-json file://${JSON}
