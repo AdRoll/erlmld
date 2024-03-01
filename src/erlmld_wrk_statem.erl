@@ -461,11 +461,11 @@ handle_event(?INTERNAL,
     end,
     ok = gen_tcp:send(Socket, [IoData, "\n"]),
     case NextReadKind of
-        ?SHUTDOWN ->
+        Kind when Kind == ?SHUTDOWN; Kind == ?SHUTDOWN_CHECKPOINT ->
             %% next state is waiting for the MLD to close the connection.
             %% But it might not happen, so we'll close it ourselves after a timeout.
             %% Note that this timeout gets cancelled if we have state changes before it fires.
-            {next_state, {?PEER_READ, ?SHUTDOWN}, activate(Data), [{state_timeout, 5000, shutdown}]};
+            {next_state, {?PEER_READ, Kind}, activate(Data), [{state_timeout, 5000, shutdown}]};
         _ ->
             {next_state, {?PEER_READ, NextReadKind}, activate(Data)}
     end;
