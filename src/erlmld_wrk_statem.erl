@@ -460,14 +460,25 @@ handle_event(?INTERNAL,
             throw({stop, {error, {unprocessed_request_data, Buf}}})
     end,
     ok = gen_tcp:send(Socket, [IoData, "\n"]),
-    {next_state, {?PEER_READ, NextReadKind}, activate(Data)};
+    case NextReadKind of
+        ?SHUTDOWN ->
+            %% next state is waiting for the MLD to close the connection.
+            %% But it might not happen, so we'll close it ourselves after a timeout.
+            %% Note that this timeout gets cancelled if we have state changes before it fires.
+            {next_state, {?PEER_READ, ?SHUTDOWN}, activate(Data), [{state_timeout, 5000, shutdown}]};
+        _ ->
+            {next_state, {?PEER_READ, NextReadKind}, activate(Data)}
+    end;
 %% some tcp data was received, but couldn't be handled in the current state.  this event
 %% will be seen again after changing states.
 handle_event(info, {tcp, _Socket, _Bin}, _State, _Data) ->
     {keep_state_and_data, postpone};
 handle_event(info, Message, _State, #data{worker_state = WorkerState}) ->
     error_logger:error_msg("~p ignoring unexpected message ~p~n", [WorkerState, Message]),
-    keep_state_and_data.
+    keep_state_and_data;
+
+handle_event(state_timeout, shutdown, _State, _Data) ->
+    stop.
 
 %%%===================================================================
 %%% Internal functions
