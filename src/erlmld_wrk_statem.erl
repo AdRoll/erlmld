@@ -477,7 +477,7 @@ handle_event(info, Message, _State, #data{worker_state = WorkerState}) ->
     error_logger:error_msg("~p ignoring unexpected message ~p~n", [WorkerState, Message]),
     keep_state_and_data;
 handle_event(state_timeout, shutdown, _State, _Data) ->
-    stop.
+    {stop, {error, shutdown_timeout}}.
 
 %%%===================================================================
 %%% Internal functions
