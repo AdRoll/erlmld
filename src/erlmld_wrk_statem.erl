@@ -465,7 +465,10 @@ handle_event(?INTERNAL,
             %% next state is waiting for the MLD to close the connection.
             %% But it might not happen, so we'll close it ourselves after a timeout.
             Timeout = application:get_env(erlmld, shutdown_timeout, 5000),
-            {next_state, {?PEER_READ, Kind}, activate(Data), [{{timeout, shutdown}, Timeout, shutdown}]};
+            {next_state,
+             {?PEER_READ, Kind},
+             activate(Data),
+             [{{timeout, shutdown}, Timeout, shutdown}]};
         _ ->
             {next_state, {?PEER_READ, NextReadKind}, activate(Data)}
     end;
@@ -476,7 +479,6 @@ handle_event(info, {tcp, _Socket, _Bin}, _State, _Data) ->
 handle_event(info, Message, _State, #data{worker_state = WorkerState}) ->
     error_logger:error_msg("~p ignoring unexpected message ~p~n", [WorkerState, Message]),
     keep_state_and_data;
-
 handle_event({timeout, shutdown}, shutdown, _State, _Data) ->
     {stop, {error, shutdown_timeout}}.
 
