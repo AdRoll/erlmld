@@ -461,11 +461,11 @@ handle_event(?INTERNAL,
     end,
     ok = gen_tcp:send(Socket, [IoData, "\n"]),
     case NextReadKind of
-        Kind when Kind == ?SHUTDOWN; Kind == ?SHUTDOWN_CHECKPOINT ->
+        Kind when Kind == ?SHUTDOWN ->
             %% next state is waiting for the MLD to close the connection.
             %% But it might not happen, so we'll close it ourselves after a timeout.
-            %% Note that this timeout gets cancelled if we have state changes before it fires.
-            {next_state, {?PEER_READ, Kind}, activate(Data), [{state_timeout, 5000, shutdown}]};
+            Timeout = application:get_env(erlmld, shutdown_timeout, 5000),
+            {next_state, {?PEER_READ, Kind}, activate(Data), [{{timeout, shutdown}, Timeout, shutdown}]};
         _ ->
             {next_state, {?PEER_READ, NextReadKind}, activate(Data)}
     end;
@@ -476,7 +476,8 @@ handle_event(info, {tcp, _Socket, _Bin}, _State, _Data) ->
 handle_event(info, Message, _State, #data{worker_state = WorkerState}) ->
     error_logger:error_msg("~p ignoring unexpected message ~p~n", [WorkerState, Message]),
     keep_state_and_data;
-handle_event(state_timeout, shutdown, _State, _Data) ->
+
+handle_event({timeout, shutdown}, shutdown, _State, _Data) ->
     {stop, {error, shutdown_timeout}}.
 
 %%%===================================================================
