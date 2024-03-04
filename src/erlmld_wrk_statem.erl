@@ -187,6 +187,7 @@ handle_event({call, From}, {accepted, Socket}, ?INIT, Data) ->
 %% shutdown action (MLD will read our response, then close its stream to us, then await
 %% our exit).
 handle_event(info, {tcp_closed, _}, {?PEER_READ, ?SHUTDOWN}, _) ->
+    error_logger:info_msg("shutdown message received, shutting down normally~n"),
     stop;
 %% connection was closed, but we didn't expect it.
 handle_event(info, {tcp_closed, _}, _State, _) ->
@@ -460,14 +461,28 @@ handle_event(?INTERNAL,
             throw({stop, {error, {unprocessed_request_data, Buf}}})
     end,
     ok = gen_tcp:send(Socket, [IoData, "\n"]),
-    {next_state, {?PEER_READ, NextReadKind}, activate(Data)};
+    case NextReadKind of
+        Kind when Kind == ?SHUTDOWN ->
+            %% next state is waiting for the MLD to close the connection.
+            %% But it might not happen, so we'll close it ourselves after a timeout.
+            Timeout = application:get_env(erlmld, shutdown_timeout, 5000),
+            {next_state,
+             {?PEER_READ, Kind},
+             activate(Data),
+             [{{timeout, shutdown}, Timeout, shutdown}]};
+        _ ->
+            {next_state, {?PEER_READ, NextReadKind}, activate(Data)}
+    end;
 %% some tcp data was received, but couldn't be handled in the current state.  this event
 %% will be seen again after changing states.
 handle_event(info, {tcp, _Socket, _Bin}, _State, _Data) ->
     {keep_state_and_data, postpone};
 handle_event(info, Message, _State, #data{worker_state = WorkerState}) ->
     error_logger:error_msg("~p ignoring unexpected message ~p~n", [WorkerState, Message]),
-    keep_state_and_data.
+    keep_state_and_data;
+handle_event({timeout, shutdown}, shutdown, _State, _Data) ->
+    error_logger:error_msg("timeout reached while waiting for SHUTDOWN message, shutdown forced~n"),
+    {stop, {error, shutdown_timeout}}.
 
 %%%===================================================================
 %%% Internal functions
