@@ -187,6 +187,7 @@ handle_event({call, From}, {accepted, Socket}, ?INIT, Data) ->
 %% shutdown action (MLD will read our response, then close its stream to us, then await
 %% our exit).
 handle_event(info, {tcp_closed, _}, {?PEER_READ, ?SHUTDOWN}, _) ->
+    error_logger:info_msg("shutdown message received, shutting down normally~n"),
     stop;
 %% connection was closed, but we didn't expect it.
 handle_event(info, {tcp_closed, _}, _State, _) ->
@@ -480,6 +481,7 @@ handle_event(info, Message, _State, #data{worker_state = WorkerState}) ->
     error_logger:error_msg("~p ignoring unexpected message ~p~n", [WorkerState, Message]),
     keep_state_and_data;
 handle_event({timeout, shutdown}, shutdown, _State, _Data) ->
+    error_logger:error_msg("timeout reached while waiting for SHUTDOWN message, shutdown forced~n"),
     {stop, {error, shutdown_timeout}}.
 
 %%%===================================================================
